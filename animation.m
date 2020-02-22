@@ -32,8 +32,8 @@ for row = 1:1:rows_
     time = Time(row);
     title("T = " + time);
     
-    xlim([-20, 20])
-    ylim([-15, 15])
+    xlim([-8, 8])
+    ylim([-7, 7])
     axis equal
 
    drawnow
