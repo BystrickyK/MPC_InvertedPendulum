@@ -1,9 +1,9 @@
 close all
 
-data = sol.y;
-Time = sol.x;
+data = solutionNonlinear.y;
+Time = solutionNonlinear.x;
 
-timeSeries = timeseries(sol.y, sol.x);
+timeSeries = timeseries(data, Time);
 dt = 0.01;
 timeSeries.resample(timeSeries.Time(1):dt:timeSeries.Time(end));
 

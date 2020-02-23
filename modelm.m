@@ -48,7 +48,7 @@ V = vpa(V, 2)
 A_sym = jacobian(V, x);
 B_sym = jacobian(V, u);
 
-x_operating = [pi, 0, 0, 0];
+x_operating = [0, 0, 0, 0];
 A = subs(A_sym, [x, 0], [x_operating, 0]);
 B = subs(B_sym, [x, 0], [x_operating, 0]);
 
@@ -68,7 +68,7 @@ A_sub(3,:) = [];
 A_sub(:,3) = [];
 eigs(A_sub)
 
-initialCondition = [pi, 0, 0, 0] %alpha, Dalpha, xc, Dxc
+initialCondition = [pi/2, 0, 0, 0] %alpha, Dalpha, xc, Dxc
 simulationTime = 20;
 
 solutionNonlinear = ode15s(nonlinearSystem, [0 simulationTime], initialCondition);
@@ -78,7 +78,8 @@ solutionLinear.t = t;
 solutionLinear.x = x;
 
 
-f1 = figure
+f1 = figure;
+sgtitle("Model comparison")
 subplot(221);
 hold on
 grid on
