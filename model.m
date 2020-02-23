@@ -1,7 +1,8 @@
+
 eta_g = 0.9 %gearbox efficiency
 K_g = 3.71 %gearbox gear ratio
-k_t = 7.68*0 %motor current-torque constant
-k_m = 7.68*0 %motor back-emf constant
+k_t = 7.68e-3 %motor current-torque constant
+k_m = 7.68e-3 %motor back-emf constant
 R_m = 2.6 %motor armature resistance
 r_mp = 6.35e-3 %motor pinion radius (prumer pastorku)
 eta_m = 0.69 %motor efficiency
@@ -18,7 +19,6 @@ B_eq = 4.3 %equivalent viscous damping coefficient (cart)
 B_p = 0.0024 %equivalent viscous damping coefficient (pendulum)
 g = 9.81
 
-%syms eta_g K_g k_t k_m R_m r_mp eta_m A_m J_p L_p l_p M_p m_c j_m J_eq B_eq B_p g
 syms x_c(t) alpha(t) V_m u
 
 %sila pusobici na cart
@@ -26,14 +26,14 @@ F_c = (eta_g*K_g*k_t/R_m/r_mp)*(-K_g*k_m*diff(x_c,t)/r_mp + eta_m*V_m) %2.11 Lin
 
 %rovnice systemu (2.9 a 2.10 v LinearPendulumGantry)
 disp("2.9 a 2.10")
-ode1 = (J_eq+M_p)*diff(x_c,t,2) + M_p*l_p*cos(alpha)*diff(alpha,t,2) - M_p*l_p*sin(alpha)*diff(alpha,t)^2 == F_c - B_eq*diff(x_c,t);
-ode2 = M_p*l_p*cos(alpha)*diff(x_c,t,2) + (J_p+M_p*l_p^2)*diff(alpha,t,2) + M_p*l_p*g*sin(alpha) == -B_p*diff(alpha,t);
+ode1 = (J_eq+M_p)*diff(x_c,t,2) + M_p*l_p*cos(alpha)*diff(alpha,t,2) - M_p*l_p*sin(alpha)*diff(alpha,t)^2 == F_c - B_eq*diff(x_c,t)
+ode2 = M_p*l_p*cos(alpha)*diff(x_c,t,2) + (J_p+M_p*l_p^2)*diff(alpha,t,2) + M_p*l_p*g*sin(alpha) == -B_p*diff(alpha,t)
 
 ode1 = subs(ode1, V_m, u);
 ode2 = subs(ode2, V_m, u);
 
-odes = [ode1, ode2];
-odes = simplify(odes)
+odes = [ode1, ode2]
+%odes = simplify(odes)
 
 
 [V, S] = odeToVectorField(odes);
@@ -48,14 +48,15 @@ V = vpa(V, 2)
 A_sym = jacobian(V, x);
 B_sym = jacobian(V, u);
 
-x_operating = [pi, 0, 0, 0];
+disp([transpose(x)  S])
+x_operating = [0, 0, 0, 0];
 A = subs(A_sym, [x, 0], [x_operating, 0]);
 B = subs(B_sym, [x, 0], [x_operating, 0]);
 
 A = double(A)
 B = double(B)
-C = [1 0 0 0]
-D = 0
+C = eye(4)
+D = [0; 0; 0; 0]
 
 linearSystem = ss(A,B,C,D);
 
@@ -64,21 +65,22 @@ eigs(A)
 
 disp("Poles of a subsystem without x_C:")
 A_sub = A;
-A_sub(3,:) = [];
+A_sub(3,:) = []; %check if x_c is at index 3 in vector S
 A_sub(:,3) = [];
 eigs(A_sub)
 
-initialCondition = [pi, 0, 0, 0] %alpha, Dalpha, xc, Dxc
+initialCondition = [0, 0, 0, 0] %alpha, Dalpha, xc, Dxc
 simulationTime = 20;
 
-solutionNonlinear = ode15s(nonlinearSystem, [0 simulationTime], initialCondition);
+solutionNonlinear = ode45(nonlinearSystem, [0 simulationTime], initialCondition);
 [y, t, x] = initial(linearSystem, initialCondition, simulationTime);
 solutionLinear = struct;
 solutionLinear.t = t;
 solutionLinear.x = x;
 
 
-f1 = figure
+f1 = figure;
+sgtitle("Model comparison")
 subplot(221);
 hold on
 grid on
