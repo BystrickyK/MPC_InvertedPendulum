@@ -4,13 +4,8 @@ data = solutionNonlinear.y;
 Time = solutionNonlinear.x;
 
 timeSeries = timeseries(data, Time);
-dt = 0.01;
-timeSeries.resample(timeSeries.Time(1):dt:timeSeries.Time(end));
-
-
-for t = Time
-    
-end
+dt = 0.1;
+timeSeries = timeSeries.resample(timeSeries.Time(1):dt:timeSeries.Time(end));
 
 rows_ = size(timeSeries.Time);
 rows_ = rows_(1);
@@ -33,7 +28,7 @@ for row = 1:1:rows_
     grid on
     
     axis equal
-    xlim([-1-L_p*1.5, 1+L_p*1.5])
+    xlim([xc+-1-L_p*1.5, xc+1+L_p*1.5])
     ylim([-L_p*1.5, L_p*1.5])
     
     quiver( xc, 0,...
@@ -42,7 +37,7 @@ for row = 1:1:rows_
         'LineWidth', 2,...
         'Marker', '*')
 
-    time = Time(row);
+    time = timeSeries.Time(row);
     title("T = " + time + "   x = " + xc);
 
    drawnow
