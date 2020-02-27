@@ -1,14 +1,16 @@
 close all
 
-%data = solutionNonlinearLQR.y;
-%Time = solutionNonlinearLQR.x; 
+% data = solutionNonlinearLQR.y;
+% Time = solutionNonlinearLQR.x; 
 
-data = solutionNonlinearPP.y;
-Time = solutionNonlinearPP.x; 
+% data = solutionNonlinearPP.y;
+% Time = solutionNonlinearPP.x; 
 
+data = solTest.x;
+data = solTest.
 
 timeSeries = timeseries(data, Time);
-dt = 0.05;
+dt = 0.01;
 timeSeries = timeSeries.resample(timeSeries.Time(1):dt:timeSeries.Time(end));
 
 rows_ = size(timeSeries.Time);
@@ -20,10 +22,10 @@ f1 = figure;
 % vykresluje pouze každý t?etí vzorek
 for row = 1:1:rows_    
 
-    alpha = timeSeries.Data(2, 1, row);
+    alpha = timeSeries.Data(2, 1, row)*alphag;
     Dalpha = timeSeries.Data(4, 1, row);
 
-    xc = timeSeries.Data(1, 1, row);
+    xc = timeSeries.Data(1, 1, row)*xcg;
     Dxc = timeSeries.Data(3, 1, row);
    
     %poloha kyvadla
@@ -34,8 +36,8 @@ for row = 1:1:rows_
     grid on
     
     axis equal
-    %xlim([xc*1-0.1-L_p*0.5, xc*1+0.1+L_p*0.5])
-    xlim([min(timeSeries.Data(1,1,:))-0.5, max(timeSeries.Data(1,1,:)+0.5)]);
+    xlim([xc*0.9-0.1-L_p*0.5, xc*0.9+0.1+L_p*0.5])
+    %xlim([min(timeSeries.Data(1,1,:))-0.5, max(timeSeries.Data(1,1,:)+0.5)]);
     ylim([-L_p*1.5, L_p*1.5]);
     
     quiver( xc, 0,...
