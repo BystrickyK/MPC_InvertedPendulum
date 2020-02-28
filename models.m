@@ -40,7 +40,7 @@ g = 9.81;
     [A,B,C,D] = ABCD(X_operating, 0, p);
     
     Q = diag([10 10 1 1]);
-    R = 0.1;
+    R = 0.15;
     K_lqr = lqr(A,B,Q,R)
     
     pole = [ -2, -2.1, -2.2, -2.3];
@@ -56,21 +56,22 @@ U = 0;
 options = odeset('InitialStep', 0.1);
 
 simulationTime = 1e4;
-dt = 0.06;
-kRefreshPlot = 60000;
-kRefreshAnim = 2;
+dt = 0.025;
+kRefreshPlot = 10;
+kRefreshAnim = 5;
 
 figure(1)
 figure(2)
+tic
 for k = 1:simulationTime/dt
     X = Xs(end,:);
-    if rand(1) > 0.900
-       % W = [2*rand(1)-1, pi, 0, 0];
-        W = [sign(2*rand(1)-1)*0.5, pi, 0, 0];
+    if rand(1) > 0.990
+        W = [(2*rand(1)-1)*0.95, pi, 0, 0];
+        %W = [sign(2*rand(1)-1)*0.5, pi, 0, 0];
     end
     
     u = -K_lqr * ( X' - W' );
-    u = min(10, max(-10, u));
+    u = min(12, max(-12, u));
     [ts, xs] = ode45(@(t, X) pendulumCart(X,u,p), [(k-1)*dt k*dt], X, options);
 	Xs = [Xs; xs(end,:)];
     Ts = [Ts ts(end)];
@@ -79,28 +80,27 @@ for k = 1:simulationTime/dt
     
     if(Xs(end,1)>1)
         Xs(end,3) = -abs(Xs(end,3)*0);
-        Xs(end,1) = 0;
+        Xs(end,1) = 1;
         disp("bonk")
     end
     if(Xs(end,1)<-1)
         Xs(end,3) = +abs(Xs(end,3)*0);
-        Xs(end,1) = 0;
+        Xs(end,1) = -1;
         disp("bonk")
     end
     
-    if(mod(k,kRefreshPlot)==0)
-        plotRefresh(Ts,Xs,Wx,U,k,kRefreshPlot);
+    if(mod(k+1,kRefreshPlot)==1)
+        %plotRefresh(Ts,Xs,Wx,U,k,kRefreshPlot);
     end
 
      if(mod(k,kRefreshAnim)==0)
          animRefresh(Ts,Xs,W);
      end
       
-    if (mod(k,2000)==0) 
+    if (mod(k,1000)==0) 
+        disp("Computing time: " + toc)
         disp(k + "/" + simulationTime/dt);
-        disp(X)
-        disp(W)
-        disp(u)
+        tic
     end
 end
 
