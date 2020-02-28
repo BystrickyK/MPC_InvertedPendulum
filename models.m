@@ -46,57 +46,77 @@ g = 9.81;
     pole = [ -2, -2.1, -2.2, -2.3];
     K_pp = place(A,B,pole)
 %%
+%pocatecni stav
 X = [0, 17/16*pi, 0, 0]; %alpha, Dalpha, xc, Dxc
+%pozadovany stav
 W = [0, pi, 0, 0];
-Wx = W(1);
 
-Ts = 0;
-Xs = X;
-U = 0;
-options = odeset('InitialStep', 0.1);
+%nastaveni solveru
+options = odeset();
 
 simulationTime = 1e4;
-dt = 0.025;
-kRefreshPlot = 10;
-kRefreshAnim = 5;
+dt = 0.025; %samplovaci perioda
+kRefreshPlot = 20; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+kRefreshAnim = 5; % ^
+
+%predalokace poli pro data
+Xs = zeros(simulationTime/dt, 4); %stav
+Xs(1,:) = X;
+Ts = zeros(simulationTime/dt, 1);   %cas
+U = zeros(simulationTime/dt, 1);   %vstupy
+Wx = zeros(simulationTime/dt, 1); %pozadovana poloha xc
+Wx(1) = W(1);
+
 
 figure(1)
 figure(2)
+
 tic
 for k = 1:simulationTime/dt
-    X = Xs(end,:);
-    if rand(1) > 0.990
+    %soucasny stav
+    X = Xs(k,:);
+    
+    %generovani pozadovaneho stavu
+    if rand(1) > 0.980      
         W = [(2*rand(1)-1)*0.95, pi, 0, 0];
-        %W = [sign(2*rand(1)-1)*0.5, pi, 0, 0];
+        %W = [sign(2*rand(1)-1), pi, 0, 0];
     end
     
+    %definice vstupu a saturace do <-12,12>
     u = -K_lqr * ( X' - W' );
     u = min(12, max(-12, u));
-    [ts, xs] = ode45(@(t, X) pendulumCart(X,u,p), [(k-1)*dt k*dt], X, options);
-	Xs = [Xs; xs(end,:)];
-    Ts = [Ts ts(end)];
-    U = [U; u];
-    Wx = [Wx W(1)];
     
+    %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
+    [ts, xs] = ode45(@(t, X) pendulumCart(X,u,p), [(k-1)*dt k*dt], X, options);
+	Xs(k+1,:) = xs(end,:);
+    Ts(k+1) = ts(end);
+    U(k+1) = u;
+    Wx(k+1) = W(1);
+    
+    %mezni polohy xc <-1 1>
+    %po odrazu je velikost rychlosti 10% rychlosti pred narazem
     if(Xs(end,1)>1)
-        Xs(end,3) = -abs(Xs(end,3)*0);
+        Xs(end,3) = -abs(Xs(end,3)*0.1);
         Xs(end,1) = 1;
         disp("bonk")
     end
     if(Xs(end,1)<-1)
-        Xs(end,3) = +abs(Xs(end,3)*0);
+        Xs(end,3) = +abs(Xs(end,3)*0.1);
         Xs(end,1) = -1;
         disp("bonk")
     end
     
+    %refresh plotu
     if(mod(k+1,kRefreshPlot)==1)
-        %plotRefresh(Ts,Xs,Wx,U,k,kRefreshPlot);
+        plotRefresh(Ts,Xs,Wx,U,k,kRefreshPlot);
     end
-
-     if(mod(k,kRefreshAnim)==0)
-         animRefresh(Ts,Xs,W);
-     end
+    
+    %refresh animace
+    if(mod(k,kRefreshAnim)==0)
+         animRefresh(Ts,Xs,W,k);
+    end
       
+    %progress meter a vypocetni cas na 1000 vzorku
     if (mod(k,1000)==0) 
         disp("Computing time: " + toc)
         disp(k + "/" + simulationTime/dt);

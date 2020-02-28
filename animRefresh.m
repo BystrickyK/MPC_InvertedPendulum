@@ -1,10 +1,10 @@
-function [] = animRefresh(Ts, Xs, W)
+function [] = animRefresh(Ts, Xs, W, k)
     
     figure(2);
     % animaci lze zrychlit pomocí úpravy kroku, nap?. p?i 1:3:rows_ se
     % vykresluje pouze každý t?etí vzorek
-        alpha = Xs(end, 2);
-        xc = Xs(end, 1);
+        alpha = Xs(k, 2);
+        xc = Xs(k, 1);
 
         %poloha kyvadla
         [xp, yp] = pol2cart(alpha-pi/2, 0.5);
