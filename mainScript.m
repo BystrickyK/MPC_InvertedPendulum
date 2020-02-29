@@ -36,18 +36,21 @@ g = 9.81;
     p.l_p = l_p;
     p.r_mp = r_mp;
 %%
+    %stavovy bod pro linearizaci
     X_operating = [0 pi 0 0];
     [A,B,C,D] = ABCD(X_operating, 0, p);
     
-    Q = diag([10 10 1 1]);
+    Q = diag([10 10 0 0.1]);
     R = 0.15;
     K_lqr = lqr(A,B,Q,R)
+    disp(eigs(A-K_lqr*B))
     
     pole = [ -2, -2.1, -2.2, -2.3];
     K_pp = place(A,B,pole)
+    disp(eigs(A-K_pp*B))
 %%
 %pocatecni stav
-X = [0, 17/16*pi, 0, 0]; %alpha, Dalpha, xc, Dxc
+X = [0, pi, 0, 0]; %alpha, Dalpha, xc, Dxc
 %pozadovany stav
 W = [0, pi, 0, 0];
 
@@ -55,8 +58,8 @@ W = [0, pi, 0, 0];
 options = odeset();
 
 simulationTime = 1e4;
-dt = 0.025; %samplovaci perioda
-kRefreshPlot = 20; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+dt = 0.02; %samplovaci perioda
+kRefreshPlot = 200; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
 
 %predalokace poli pro data
@@ -72,19 +75,29 @@ figure(1)
 figure(2)
 
 tic
+disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
     %soucasny stav
     X = Xs(k,:);
     
     %generovani pozadovaneho stavu
-    if rand(1) > 0.980      
-        W = [(2*rand(1)-1)*0.95, pi, 0, 0];
-        %W = [sign(2*rand(1)-1), pi, 0, 0];
+    if rand(1) > 0.990      
+        %W = [(2*rand(1)-1)*0.95, pi, 0, 0];
+        W = [sign(2*rand(1)-1)*0.9, pi, 0, 0];
+        %W = [sin(pi/16*k*dt), pi, 0, 0];
     end
     
     %definice vstupu a saturace do <-12,12>
-    u = -K_lqr * ( X' - W' );
-    u = min(12, max(-12, u));
+    if(Xs(k,1)<0.99 && Xs(k,1)>-0.99)
+        u = -K_lqr * ( X' - W' );
+        u = min(12, max(-12, u));
+    elseif(Xs(k,1)>0.99)
+        u = 0
+        disp("!")
+    elseif(Xs(k,1)<-0.99)
+        u = 0;
+        disp("!")
+    end
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
     [ts, xs] = ode45(@(t, X) pendulumCart(X,u,p), [(k-1)*dt k*dt], X, options);
@@ -95,14 +108,13 @@ for k = 1:simulationTime/dt
     
     %mezni polohy xc <-1 1>
     %po odrazu je velikost rychlosti 10% rychlosti pred narazem
-    if(Xs(end,1)>1)
-        Xs(end,3) = -abs(Xs(end,3)*0.1);
-        Xs(end,1) = 1;
+    if(Xs(k,1)>1)
+        Xs(k,3) = -abs(Xs(k,3)*0);
+        Xs(k,1) = 1;
         disp("bonk")
-    end
-    if(Xs(end,1)<-1)
-        Xs(end,3) = +abs(Xs(end,3)*0.1);
-        Xs(end,1) = -1;
+    elseif(Xs(k,1)<-1)
+        Xs(k,3) = +abs(Xs(k,3)*0);
+        Xs(k,1) = -1;
         disp("bonk")
     end
     
@@ -113,7 +125,7 @@ for k = 1:simulationTime/dt
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-         animRefresh(Ts,Xs,W,k);
+        animRefresh(Ts,Xs,W,k);
     end
       
     %progress meter a vypocetni cas na 1000 vzorku

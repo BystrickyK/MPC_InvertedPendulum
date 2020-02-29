@@ -13,12 +13,12 @@ function [] = plotRefresh(Ts, Xs, Wx, U, k, Ka)
     subplot(221);
     hold on
     grid on
-    plot(time, Xs(k-Ka:k, 1), "LineWidth", 1.2, 'Color', 'b');
+    plot(time, Xs(k-Ka:k, 1), "LineWidth", 1.2, 'Color', 'r');
     plot(time, Wx(k-Ka:k), "LineWidth", 1.2, 'LineStyle', '-.', 'Color', 'g');
 %     xlabel('Time t [$s$]','interpreter','latex')
 %     ylabel('$x_c$ [$m$]', 'Interpreter', 'Latex')
 %     title('$x_c$', 'Interpreter', 'Latex')
-%      xlim(xlims);
+    xlim(xlims);
     
     subplot(222);
     hold on
@@ -32,7 +32,7 @@ function [] = plotRefresh(Ts, Xs, Wx, U, k, Ka)
     subplot(234);
     hold on
     grid on
-    plot(time, Xs(k-Ka:k, 2), "LineWidth", 1.2, 'Color', 'b');
+    plot(time, Xs(k-Ka:k, 2), "LineWidth", 1.2, 'Color', 'r');
 %     xlabel('Time t [$s$]','interpreter','latex')
      xlim(xlims);
 

@@ -7,7 +7,7 @@ function [] = animRefresh(Ts, Xs, W, k)
         xc = Xs(k, 1);
 
         %poloha kyvadla
-        [xp, yp] = pol2cart(alpha-pi/2, 0.5);
+        [xp, yp] = pol2cart(alpha-pi/2, 0.45);
         %% vykreslovani
         cla
         hold on
@@ -15,8 +15,8 @@ function [] = animRefresh(Ts, Xs, W, k)
 
         axis equal
         %xlim([xc*1-0.1-L_p*0.5, xc*1+0.1+L_p*0.5])
-        xlim([-2, 2]);
-        ylim([-1, 1]);
+        xlim([-1.1, 1.1]);
+        ylim([-0.2, 0.6]);
 
         quiver( xc, 0,...
             xp, yp,...
@@ -24,7 +24,7 @@ function [] = animRefresh(Ts, Xs, W, k)
             'LineWidth', 2,...
             'Marker', '*');
         
-        plot(W(1), 0.5, 'bO');
+        plot(W(1), 0.45, 'bO');
 
         drawnow
     end
