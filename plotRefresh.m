@@ -1,4 +1,4 @@
-function [] = plotRefresh(Ts, Xs, Xest, Wx, U, D, k, Ka)
+function [] = plotRefresh(Ts, Xs, Xest, Wx, U, D, Y, k, Ka)
   
 figure(1);
     if(k-Ka == 0)
@@ -51,27 +51,36 @@ figure(1);
 %     title('$\dot{\alpha}$', 'Interpreter', 'Latex')
      xlim(xlims);    
     
-% figure(3)
-%     subplot(311)
-%     hold on 
-%     grid on
-%     plot(time, D(k-Ka:k, 1), 'LineWidth', 1, 'Color', 'r');
-%     xlim(xlims);
-%     
-%     subplot(312)
-%     hold on 
-%     grid on
-%     plot(time, D(k-Ka:k, 2), 'LineWidth', 1, 'Color', 'r');
-%     xlim(xlims);
+figure(3)
+    subplot(511)
+    hold on 
+    grid on
+    plot(time, D(k-Ka:k, 1), 'LineWidth', 1, 'Color', 'r');
+    xlim(xlims);
     
-%     subplot(313);
-%     hold on
-%     grid on
-%     stairs(time, U(k-Ka:k), "LineWidth", 2, 'Color', 'r');
-%     xlabel('Time t [$s$]','interpreter','latex')
-%     ylabel('$\dot{x_c}$ [$\frac{m}{s}$]', 'Interpreter', 'Latex')
-%     title('$\dot{x_c}$', 'Interpreter', 'Latex') 
-%     xlim(xlims);
+    subplot(512)
+    hold on 
+    grid on
+    plot(time, D(k-Ka:k, 2), 'LineWidth', 1, 'Color', 'r');
+    xlim(xlims);
+    
+    subplot(513);
+    hold on
+    grid on
+    stairs(time, U(k-Ka:k), "LineWidth", 2, 'Color', 'k');
+    xlim(xlims);
+    
+    subplot(514);
+    hold on
+    grid on
+    stairs(time, Y(k-Ka:k, 1), "LineWidth", 2, 'Color', 'b');
+    xlim(xlims);
+    
+    subplot(515);
+    hold on
+    grid on
+    stairs(time, Y(k-Ka:k, 2), "LineWidth", 2, 'Color', 'b');
+    xlim(xlims);
     
 drawnow
 

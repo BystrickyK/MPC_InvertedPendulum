@@ -112,15 +112,15 @@ for k = 1:simulationTime/dt
     
     % Generovani pozadovaneho stavu
     if rand(1) > 0.99      
-        W = [(2*rand(1)-1)*0.95, pi, 0, 0];
+        W = [(2*rand(1)-1)*0.85, pi, 0, 0];
         %W = [sign(2*rand(1)-1)*0.9, pi, 0, 0];
         %W = [sin(pi/16*k*dt), pi, 0, 0];
         Wrel = W - X_operating;
     end
     
     %% Generovani poruchy
-    if rand(1) > 0.999      %sila
-        d(1) = randn(1)*0.1;
+    if rand(1) > 0.99      %sila
+        d(1) = randn(1)*0.5;
         d1T = randn(1)*100;
         d1t = 0;
         d1a = 1;
@@ -129,8 +129,8 @@ for k = 1:simulationTime/dt
         %disp(d1T)
     end
     
-    if rand(1) > 0.995      %moment
-        d(2) = randn(1)*0.1;
+    if rand(1) > 0.99      %moment
+        d(2) = randn(1)*0.5;
         d2T = randn(1)*100;
         d2t = 0;
         d2a = 1;
@@ -176,8 +176,8 @@ for k = 1:simulationTime/dt
     yError = y - C*xe;
     dxeA = KF.A*xe;
     %dxeB = KF.B * [Wrel'; yError];
-    dxeBW = KF.B(:, 1:4)*Wrel'
-    dxeBYERROR = KF.B(:, 5:6)*yError
+    dxeBW = KF.B(:, 1:4)*Wrel';
+    dxeBYERROR = KF.B(:, 5:6)*yError;
     Dxe = (dxeA + dxeBW + dxeBYERROR)*dt;
     Xest(k+1, :) = xe+Dxe; 
        % Xest are coords relative to X_operating
@@ -206,7 +206,7 @@ for k = 1:simulationTime/dt
     D(k+1, :) = d;
     
     % mereni Y
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*010 randn(1)*0.01]' - X_operating(1:2)';
+    Y(k+1, :) = C * xs(end,:)' + [randn(1)*10 randn(1)*1]' - X_operating(1:2)';
     
     
     %% Vizualizace
@@ -214,7 +214,7 @@ for k = 1:simulationTime/dt
     
     %refresh plotu
     if(mod(k+1,kRefreshPlot)==1)
-        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,k,kRefreshPlot);
+        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
     end
     
     %refresh animace
