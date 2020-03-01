@@ -49,13 +49,11 @@ g = 9.81;
     %K_pp = place(A,B,pole)
     %disp(eigs(A-K_pp*B))
 %% Navrh estimatoru
-    d1A = 1;            %force disturbance 
-    d2A = 1;          %moment disturbance 
-    Vd = 0.1*diag(4);      %disturbance covariance
-    Vd(3,3) = d1A;
-    Vd(4,4) = d2A;
+
+    Vd = 1*diag(4);      %disturbance covariance
+    Vd(1,1) = 10;
     
-    Vn = eye(2)*100;                 %noise covariance
+    Vn = [100 0; 0 0.5];                 %noise covariance
 
     Af = A-B*K_lqr;
     Bf = B*K_lqr
@@ -65,12 +63,13 @@ g = 9.81;
     Kf = (lqr(Af', C', Vd, Vn))';
     
     KF = ss(Af-Kf*C, [Bf Kf], Cf, 0*[Bf Kf]);
+    disp(eigs(KF.A))
 
-    %%
+%% Nastaveni pocatecnich hodnot
 %pocatecni stav
 X = [0, pi, 0, 0]; %alpha, Dalpha, xc, Dxc
 %pozadovany stav
-W = [0.5, pi, 0, 0];
+W = [0, pi, 0, 0];
 Wrel = W - X_operating;
 
 %nastaveni solveru
@@ -78,11 +77,11 @@ options = odeset();
 
 simulationTime = 1e4;
 dt = 0.02; %samplovaci perioda
-kRefreshPlot = 20; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+kRefreshPlot = 10; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
 
 %predalokace poli pro data
-Xs = zeros(simulationTime/dt, 4); %stav
+Xs = zeros(simulationTime/dt, 4); %skutecny stav
 Xs(1,:) = X;
 Xest = zeros(simulationTime/dt, 4); %estimovany stav
 Xest(1,:) = X - X_operating;
@@ -112,7 +111,7 @@ for k = 1:simulationTime/dt
     X = Xs(k,:);
     
     % Generovani pozadovaneho stavu
-    if rand(1) > 0.9995      
+    if rand(1) > 0.99      
         W = [(2*rand(1)-1)*0.95, pi, 0, 0];
         %W = [sign(2*rand(1)-1)*0.9, pi, 0, 0];
         %W = [sin(pi/16*k*dt), pi, 0, 0];
@@ -120,9 +119,8 @@ for k = 1:simulationTime/dt
     end
     
     %% Generovani poruchy
-    if rand(1) > 0.995      
+    if rand(1) > 0.999      %sila
         d(1) = randn(1)*0.1;
-        d(1) = d(1) - 0.5*d(1);
         d1T = randn(1)*100;
         d1t = 0;
         d1a = 1;
@@ -131,9 +129,8 @@ for k = 1:simulationTime/dt
         %disp(d1T)
     end
     
-    if rand(1) > 0.995      
-        d(2) = randn(1)/d2A*0.1;
-        d(2) = d(2) - 0.5*d(2);
+    if rand(1) > 0.995      %moment
+        d(2) = randn(1)*0.1;
         d2T = randn(1)*100;
         d2t = 0;
         d2a = 1;
@@ -161,26 +158,27 @@ for k = 1:simulationTime/dt
 
     %% Regulace
     %definice vstupu a saturace do <-12,12>
-    if(Xs(k,1)<0.99 && Xs(k,1)>-0.99)
-        u = -K_lqr * ( X' - W' );
+    Xr = Xest(k,:) + X_operating;
+    if(Xr(1)<0.99 && Xr(1)>-0.99)
+        u = -K_lqr * ( Xr' - W' );
         u = min(12, max(-12, u));
-    elseif(Xs(k,1)>0.99)
+    elseif(Xr(1)>0.99)
         u = 0
         disp("!")
-    elseif(Xs(k,1)<-0.99)
+    elseif(Xr(1)<-0.99)
         u = 0;
         disp("!")
     end
     
     %% Estimace stavu X
-    xe = Xest(k,:)';
+    xe = Xs(k,:)' - X_operating';
     y = Y(k, :)';
-    yError = y - C*xe
+    yError = y - C*xe;
     dxeA = KF.A*xe;
-    dxeB = KF.B * [Wrel'; yError];
-    %dxeBW = KF.B(1:4)*Wrel'
-    %dxeBYERROR = KF.B(5:6)*yError
-    Dxe = (dxeA + dxeB)*dt;
+    %dxeB = KF.B * [Wrel'; yError];
+    dxeBW = KF.B(:, 1:4)*Wrel'
+    dxeBYERROR = KF.B(:, 5:6)*yError
+    Dxe = (dxeA + dxeBW + dxeBYERROR)*dt;
     Xest(k+1, :) = xe+Dxe; 
        % Xest are coords relative to X_operating
 
@@ -208,7 +206,8 @@ for k = 1:simulationTime/dt
     D(k+1, :) = d;
     
     % mereni Y
-    Y(k+1, :) = C * xs(end,:)' - X_operating(1:2)';
+    Y(k+1, :) = C * xs(end,:)' + [randn(1)*010 randn(1)*0.01]' - X_operating(1:2)';
+    
     
     %% Vizualizace
     
@@ -220,7 +219,7 @@ for k = 1:simulationTime/dt
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-        %animRefresh(Ts,Xs,W,k);
+        animRefresh(Ts,Xs,W,k);
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
