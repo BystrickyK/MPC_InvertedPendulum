@@ -49,13 +49,13 @@ g = 9.81;
     %K_pp = place(A,B,pole)
     %disp(eigs(A-K_pp*B))
 %% Navrh estimatoru
-    d1A = 1;            %force disturbance 
-    d2A = 1;          %moment disturbance 
-    Vd = 0.1*diag(4);      %disturbance covariance
+    d1A = 0.1;            %force disturbance 
+    d2A = 0.1;          %moment disturbance 
+    Vd = 0.01*diag(4);      %disturbance covariance
     Vd(3,3) = d1A;
     Vd(4,4) = d2A;
     
-    Vn = eye(2)*100;                 %noise covariance
+    Vn = eye(2)*1000;                 %noise covariance
 
     Af = A-B*K_lqr;
     Bf = B*K_lqr
@@ -121,7 +121,7 @@ for k = 1:simulationTime/dt
     
     %% Generovani poruchy
     if rand(1) > 0.995      
-        d(1) = randn(1)*0.1;
+        d(1) = randn(1)*0;
         d(1) = d(1) - 0.5*d(1);
         d1T = randn(1)*100;
         d1t = 0;
@@ -132,7 +132,7 @@ for k = 1:simulationTime/dt
     end
     
     if rand(1) > 0.995      
-        d(2) = randn(1)/d2A*0.1;
+        d(2) = randn(1)/d2A*0;
         d(2) = d(2) - 0.5*d(2);
         d2T = randn(1)*100;
         d2t = 0;
