@@ -5,17 +5,17 @@ figure(1);
         Ka = Ka - 1;
     end
     
-    xlims = [Ts(k)-20, Ts(k)];
+    xlims = [Ts(k)-8, Ts(k)];
     time = Ts(k-Ka:k);
     
     subplot(221);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 1), "LineWidth", 2, 'Color', 'b');
-    if(Wx~=[])
+    if(length(Wx)~=0)
         plot(time, Wx(k-Ka:k), "LineWidth", 2, 'LineStyle', '-.', 'Color', 'g');
     end
-    if(Xest~=[])
+    if(length(Xest)~=0)
         plot(time, Xest(k-Ka:k, 1), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
     end
 %     xlabel('Time t [$s$]','interpreter','latex')
@@ -27,7 +27,7 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 2), "LineWidth", 2, 'Color', 'b');
-    if(Xest~=[])
+    if(length(Xest)~=0)
         plot(time, Xest(k-Ka:k, 2), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
     end
 %     xlabel('Time t [$s$]','interpreter','latex')
@@ -37,7 +37,7 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 3), "LineWidth", 2, 'Color', 'b');
-    if(Xest~=[])
+    if(length(Xest)~=0)
         plot(time, Xest(k-Ka:k, 3), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
     end
 %     xlabel('Time t [$s$]','interpreter','latex')
@@ -49,7 +49,7 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 4), "LineWidth", 2, 'Color', 'b');
-    if(Xest~=[])
+    if(length(Xest)~=0)
         plot(time, Xest(k-Ka:k, 4), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
     end
 %     xlabel('Time t [$s$]','interpreter','latex')

@@ -24,8 +24,8 @@ function [] = animRefresh(Ts, Xs, Wx, k)
             'LineWidth', 2,...
             'Marker', 'o')
         
-        if (length(Wx) == 0)
-            [];
+        if (length(Wx) == [])
+            []
         else
             plot(Wx(k,1), 0.45, 'bO');
         end

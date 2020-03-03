@@ -1,5 +1,7 @@
 clc
 close all
+addpath('functions')
+
 
 data = load('ResultsMPC.mat');
 data = data.sol;
@@ -24,7 +26,7 @@ tic
 for k = 1:1:samples
     %% Vizualizace
     if(mod(k,kRefreshPlot)==0)
-        %plotRefresh(Ts,Xs,[],[],U,D,Y,k,kRefreshPlot);
+        plotRefresh(Ts,Xs,[],[],U,D,Y,k,kRefreshPlot);
     end
     if(mod(k,kRefreshAnim)==0)
         animRefresh(Ts,Xs,[],k);

@@ -46,13 +46,13 @@ nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); X(2)];
 nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 1 0 0];
 
-nlobj.Weights.OutputVariables = [3 3];
+nlobj.Weights.OutputVariables = [30 10];
 
-nlobj.OV(1).Min = -1;
-nlobj.OV(1).Max = 1;
+nlobj.OV(1).Min = -0.5;
+nlobj.OV(1).Max = 0.5;
 
-nlobj.MV.Min = -25;
-nlobj.MV.Max = 25;
+nlobj.MV.Min = -12;
+nlobj.MV.Max = 12;
 
 validateFcns(nlobj, X_operating, 0, [])
 
@@ -69,7 +69,7 @@ X = [0, 0, 0, 0]; %alpha, dAlpha, xc, dXc
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 8;
+simulationTime = 60;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 1; % ^
@@ -110,7 +110,7 @@ for k = 1:simulationTime/dt
     if k*dt < 5
         yref = yref2;
     else
-        yref = yref1;
+        %yref = yref1;
     end
     
     %% Estimace stavu X
@@ -118,7 +118,7 @@ for k = 1:simulationTime/dt
     %% Regulace
     [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
     %predict(EKF, [u; dt]);    
-    u
+%     u
 
     %% Simulace
     
@@ -197,4 +197,4 @@ sol.bonked_k = bonked_k;
 %vytiskne øe¹ení
 sol
 
-save('ResultsMPC.mat', 'sol');
+save('ResultsMPC2.mat', 'sol');

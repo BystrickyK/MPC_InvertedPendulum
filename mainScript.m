@@ -211,12 +211,12 @@ for k = 1:simulationTime/dt
     
     %refresh plotu
     if(mod(k+1,kRefreshPlot)==1)
-        %plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
+        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
     end
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-        %animRefresh(Ts,Xs,Wx,k);
+        animRefresh(Ts,Xs,Wx,k);
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
