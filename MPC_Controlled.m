@@ -31,11 +31,10 @@ p.J_eq = p.M_c + p.eta_g*p.K_g^2*p.J_m/p.r_mp^2;
 nx = 4;
 ny = 2;
 nu = 1;
-dt = 0.1;
 nlobj = nlmpc(nx, ny, nu);
 
-nlobj.PredictionHorizon = 20;
-nlobj.ControlHorizon = 5;
+nlobj.PredictionHorizon = 15;
+nlobj.ControlHorizon = [1 2 3 2 1];
 dt = 0.05;
 nlobj.Ts = dt;
 
@@ -46,7 +45,7 @@ nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); X(2)];
 nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 1 0 0];
 
-nlobj.Weights.OutputVariables = [30 10];
+nlobj.Weights.OutputVariables = [20 10];
 
 nlobj.OV(1).Min = -0.5;
 nlobj.OV(1).Max = 0.5;
@@ -69,7 +68,7 @@ X = [0, 0, 0, 0]; %alpha, dAlpha, xc, dXc
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 60;
+simulationTime = 20;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 1; % ^
@@ -118,7 +117,22 @@ for k = 1:simulationTime/dt
     %% Regulace
     [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
     %predict(EKF, [u; dt]);    
-%     u
+    figure(4)
+    subplot(321)
+    stairs(info.Topt, info.Xopt(:,1), 'bo-');
+    grid on
+    subplot(322)
+    plot(info.Topt, info.Xopt(:,2), 'bo-');
+    grid on
+    subplot(323)
+    plot(info.Topt, info.Xopt(:,3), 'ro-');
+    grid on
+    subplot(324)
+    plot(info.Topt, info.Xopt(:,4), 'ro-');
+    grid on
+    subplot(313)
+    stairs(info.Topt, info.MVopt(:,1), 'ko-');
+    grid on
 
     %% Simulace
     

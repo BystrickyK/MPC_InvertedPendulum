@@ -27,41 +27,16 @@ p.J_eq = p.M_c + p.eta_g*p.K_g^2*p.J_m/p.r_mp^2;
     %X_operating je stavovy bod pro linearizaci
     X_operating = [0 pi 0 0];
     [A,B,C,D] = ABCD(X_operating, 0, p)
-%     
-%     model.Plant = ss(A,B,C,D);
-%     
-%     model.Nominal = [];
-%     model.Nominal.X = X_operating;
-%     model.Nominal.U = 0;
-%     model.Nominal.Y = X_operating(1:2);
-%     model.Nominal.DX = zeros(1,4);
-%     
-%     OV = struct();
-%     OV(1).Name = "x_c";
-%     OV(2).Name = "alpha";
-%     
-%     OV(1).Max = 1;
-%     OV(1).Min = -1;
-%     
-%     MV = struct();
-%     MV(1).Name = "u";
-%     
-%     MV(1).Max = 12;
-%     MV(1).Min = -12;
-%     
-%     dt = 0.10;
-%     pH= 20; %Prediction horizon
-%     cH = 7; %Control horizon
-%     controller_MPC = mpc(model, dt, pH, cH, [], MV, OV);
     
 nx = 4;
 ny = 2;
 nu = 1;
-dt = 0.1;
 nlobj = nlmpc(nx, ny, nu);
 
 nlobj.PredictionHorizon = 15;
 nlobj.ControlHorizon = 5;
+dt = 0.05;
+nlobj.Ts = dt;
 
 nlobj.Model.StateFcn = @(X, u) pendulumCart(X ,u ,[0 0],p);
 nlobj.Jacobian.StateFcn = @(X, u) ABCD(X, u, p);
@@ -70,10 +45,10 @@ nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); X(2)];
 nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 1 0 0];
 
-nlobj.Weights.OutputVariables = [3 6];
+nlobj.Weights.OutputVariables = [30 10];
 
-nlobj.OV(1).Min = -1;
-nlobj.OV(1).Max = 1;
+nlobj.OV(1).Min = -0.5;
+nlobj.OV(1).Max = 0.5;
 
 nlobj.MV.Min = -12;
 nlobj.MV.Max = 12;
@@ -87,16 +62,16 @@ validateFcns(nlobj, X_operating, 0, [])
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X = [0, pi, 0, 0]; %alpha, dAlpha, xc, dXc
+X = [0, 0, 0, 0]; %alpha, dAlpha, xc, dXc
 %EKF.State = X;
 
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 1e2;
+simulationTime = 20;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 5; % ^
+kRefreshAnim = 1; % ^
 
 %predalokace poli pro data
 Xs = zeros(simulationTime/dt, 4); %skutecny stav
@@ -104,11 +79,11 @@ Xs(1,:) = X;
 Ts = zeros(simulationTime/dt, 1);   %cas
 U = zeros(simulationTime/dt, 1);   %vstupy
 U(1) = 0;
-Wx = zeros(simulationTime/dt, 1); %pozadovana poloha xc
+%Wx = zeros(simulationTime/dt, 1); %pozadovana poloha xc
 D = zeros(simulationTime/dt, 2); %poruchy
 Y = zeros(simulationTime/dt, 2); %mereni
 Y(1,:) = X(1, 1:2);
-Wx(1) = W(1);
+%Wx(1) = W(1);
 
 d = [0 0];
 d1T = 0;
@@ -129,11 +104,12 @@ hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
+    X = Xs(k,:);
     %% Generovani pozadovaneho stavu
-    if k*dt < 50
-        yref = yref1;
-    else
+    if k*dt < 5
         yref = yref2;
+    else
+        %yref = yref1;
     end
     
     %% Estimace stavu X
@@ -141,35 +117,45 @@ for k = 1:simulationTime/dt
     %% Regulace
     [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
     %predict(EKF, [u; dt]);    
-    u
+    figure(4)
+    subplot(321)
+    plot(info.Topt, info.Xopt(:,1));
+    subplot(322)
+    plot(info.Topt, info.Xopt(:,2));
+    subplot(323)
+    plot(info.Topt, info.Xopt(:,3));
+    subplot(324)
+    plot(info.Topt, info.Xopt(:,4));
+    subplot(313)
+    plot(info.Topt, info.MVopt(:,1), ');
 
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
     [ts, xs] = ode45(@(t, X) pendulumCart(X,u,d,p), [(k-1)*dt k*dt], X, options);
     
-    %mezni polohy xc <-1 1>
-    %po odrazu je velikost rychlosti 10% rychlosti pred narazem
-    if(Xs(k,1)>1)
-        Xs(k,3) = -abs(Xs(k,3)*0);
-        Xs(k,1) = 1;
-        disp("bonk")
-        if(bonked_k==-1)    
-            bonked_k = k;
-        end
-    elseif(Xs(k,1)<-1)
-        Xs(k,3) = +abs(Xs(k,3)*0);
-        Xs(k,1) = -1;
-        disp("bonk")
-        if(bonked_k==-1)
-            bonked_k = k;
-        end
-    end
-    
+%     %mezni polohy xc <-1 1>
+%     %po odrazu je velikost rychlosti 10% rychlosti pred narazem
+%     if(Xs(k,1)>1)
+%         Xs(k,3) = -abs(Xs(k,3)*0);
+%         Xs(k,1) = 1;
+%         disp("bonk")
+%         if(bonked_k==-1)    
+%             bonked_k = k;
+%         end
+%     elseif(Xs(k,1)<-1)
+%         Xs(k,3) = +abs(Xs(k,3)*0);
+%         Xs(k,1) = -1;
+%         disp("bonk")
+%         if(bonked_k==-1)
+%             bonked_k = k;
+%         end
+%     end
+%     
 	Xs(k+1,:) = xs(end,:);
     Ts(k+1) = ts(end);
     U(k+1) = u;
-    Wx(k+1) = W(1);
+    %Wx(k+1) = W(1);
     D(k+1, :) = d;
     
     % mereni Y
@@ -186,7 +172,7 @@ for k = 1:simulationTime/dt
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-        %animRefresh(Ts,Xs,Wx,k);
+        animRefresh(Ts,Xs,[],k);
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
@@ -213,7 +199,6 @@ sol.X = Xs;
 %sol.Xest = Xest;
 sol.T = Ts;
 sol.U = U;
-sol.Wx = Wx;
 sol.D = D;
 sol.Y = Y;
 sol.bonked_k = bonked_k;
@@ -221,4 +206,4 @@ sol.bonked_k = bonked_k;
 %vytiskne øe¹ení
 sol
 
-save('ResultsMPC.mat', 'sol');
+save('ResultsMPC2.mat', 'sol');
