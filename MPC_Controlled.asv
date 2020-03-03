@@ -25,7 +25,7 @@ p.J_m = 3.9e-7; %motor moment of inertia
 p.J_eq = p.M_c + p.eta_g*p.K_g^2*p.J_m/p.r_mp^2;
 %%  Navrh regulatoru
     %X_operating je stavovy bod pro linearizaci
-    X_operating = [0 pi 0 0];
+    X_operating = [-0.4 pi 0 0];
     [A,B,C,D] = ABCD(X_operating, 0, p)
     
 nx = 4;
@@ -33,25 +33,32 @@ ny = 2;
 nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
-nlobj.PredictionHorizon = 15;
+nlobj.PredictionHorizon = 8;
 nlobj.ControlHorizon = 5;
-dt = 0.05;
+dt = 0.1;
 nlobj.Ts = dt;
 
 nlobj.Model.StateFcn = @(X, u) pendulumCart(X ,u ,[0 0],p);
 nlobj.Jacobian.StateFcn = @(X, u) ABCD(X, u, p);
 nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
-nlobj.Model.OutputFcn = @(X, u) [X(1); X(2)];
-nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 1 0 0];
+nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(2), 0.5)];
+%nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 -sin(X(2)) 0 0];
 
-nlobj.Weights.OutputVariables = [30 10];
+nlobj.Weights.OutputVariables = [8 4];
+%nlobj.Weights.ManipulatedVariablesRate = 0.1;
 
 nlobj.OV(1).Min = -0.5;
 nlobj.OV(1).Max = 0.5;
 
-nlobj.MV.Min = -12;
-nlobj.MV.Max = 12;
+nlobj.MV.Min = -10;
+nlobj.MV.Max = 10;
+
+nlobj.Optimization.UseSuboptimalSolution = true;
+nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
+nlobj.Optimization.SolverOptions.MaxIter = 20;
+
+
 
 validateFcns(nlobj, X_operating, 0, [])
 
@@ -68,7 +75,7 @@ X = [0, 0, 0, 0]; %alpha, dAlpha, xc, dXc
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 20;
+simulationTime = 13;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 1; % ^
@@ -79,11 +86,13 @@ Xs(1,:) = X;
 Ts = zeros(simulationTime/dt, 1);   %cas
 U = zeros(simulationTime/dt, 1);   %vstupy
 U(1) = 0;
-%Wx = zeros(simulationTime/dt, 1); %pozadovana poloha xc
 D = zeros(simulationTime/dt, 2); %poruchy
 Y = zeros(simulationTime/dt, 2); %mereni
 Y(1,:) = X(1, 1:2);
-%Wx(1) = W(1);
+computingTimes = zeros(simulationTime/dt, 1);
+Xc = X;
+Tc = [];
+%INFO = zeros(simulationTime/dt, 1);
 
 d = [0 0];
 d1T = 0;
@@ -93,70 +102,103 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0 0];
-yref2 = [0 pi];
+yref1 = [0 1];
+yref2 = [0 -1];
+yref = yref1;
 
 bonked_k = -1;
 k_afterBonk = 0;
 
 %% Simulace
-hbar = waitbar(0,'Simulation Progress');
+%hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
     X = Xs(k,:);
+%     %% Poruchy
+%     if rand(1) > 0.90      %sila
+%         d(1) = randn(1)*.5;
+%         d1T = randn(1)*5;
+%         d1t = 0;
+%         d1a = 1;
+%         %disp("Porucha d1")
+%         %disp(d(1))
+%         %disp(d1T)
+%     end
+%     
+%     if rand(1) > 0.90      %moment
+%         d(2) = randn(1)*.5;
+%         d2T = randn(1)*5;
+%         d2t = 0;
+%         d2a = 1;
+%         %disp("Porucha d2")
+%         %disp(d(2))
+%         %disp(d2T)
+%     end
+%     
+%     if d1a==1
+%         d1t = d1t + 1;
+%         if (d1t >= d1T)
+%             d(1) = 0;
+%         end
+%     end
+%     
+%     if d2a==1
+%         d2t = d2t + 1;
+%         if (d2t >= d2T)
+%             d(2) = 0;
+%             d2a = 0;
+%         end
+%     end
     %% Generovani pozadovaneho stavu
-    if k*dt < 5
+    T = mod(k*dt, 13)
+    if( T == 0 )
+        yref = yref1;
+    elseif ( T == 8)
         yref = yref2;
-    else
-        %yref = yref1;
     end
     
     %% Estimace stavu X
     %xe = correct(EKF, Y(k, :));
     %% Regulace
+    tic
+    
     [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
-    %predict(EKF, [u; dt]);    
+    %INFO(k) = info;
+%    predict(EKF, [u; dt]);    
     figure(4)
     subplot(321)
-    plot(info.Topt, info.Xopt(:,1));
+    plot(info.Topt, info.Xopt(:,1), 'bo-');
+    grid on
     subplot(322)
-    plot(info.Topt, info.Xopt(:,2));
+    plot(info.Topt, info.Xopt(:,2), 'bo-');
+    grid on
     subplot(323)
-    plot(info.Topt, info.Xopt(:,3));
+    plot(info.Topt, info.Xopt(:,3), 'ro-');
+    grid on
     subplot(324)
-    plot(info.Topt, info.Xopt(:,4));
+    plot(info.Topt, info.Xopt(:,4), 'ro-');
+    grid on
     subplot(313)
-    plot(info.Topt, info.MVopt(:,1), ');
+    stairs(info.Topt, info.MVopt(:,1), 'ko-');
+    grid on
+        
+        disp("Computing time: " + toc)
+        disp(k + "/" + simulationTime/dt);
 
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
     [ts, xs] = ode45(@(t, X) pendulumCart(X,u,d,p), [(k-1)*dt k*dt], X, options);
-    
-%     %mezni polohy xc <-1 1>
-%     %po odrazu je velikost rychlosti 10% rychlosti pred narazem
-%     if(Xs(k,1)>1)
-%         Xs(k,3) = -abs(Xs(k,3)*0);
-%         Xs(k,1) = 1;
-%         disp("bonk")
-%         if(bonked_k==-1)    
-%             bonked_k = k;
-%         end
-%     elseif(Xs(k,1)<-1)
-%         Xs(k,3) = +abs(Xs(k,3)*0);
-%         Xs(k,1) = -1;
-%         disp("bonk")
-%         if(bonked_k==-1)
-%             bonked_k = k;
-%         end
-%     end
-%     
+
 	Xs(k+1,:) = xs(end,:);
+    Xs(k+1, 2) = mod(Xs(k+1, 2), 2*pi);
     Ts(k+1) = ts(end);
     U(k+1) = u;
     %Wx(k+1) = W(1);
     D(k+1, :) = d;
+    Xc = [Xc; xs];
+    Tc = [Tc; ts];
     
     % mereni Y
     Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.001 randn(1)*0.001]';
@@ -176,11 +218,11 @@ for k = 1:simulationTime/dt
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
-    if (mod(k,1000)==0) 
-        disp("Computing time: " + toc)
-        disp(k + "/" + simulationTime/dt);
-        tic
-    end
+%     if (mod(k,1)==0) 
+%         disp("Computing time: " + toc)
+%         disp(k + "/" + simulationTime/dt);
+%         tic
+%     end
     
     if(bonked_k ~= -1)
         k_afterBonk = k_afterBonk + 1;
@@ -190,10 +232,10 @@ for k = 1:simulationTime/dt
         break
     end
     
-    waitbar(k*dt/simulationTime,hbar);
+    %waitbar(k*dt/simulationTime,hbar);
 end
 
-close(hbar);
+%close(hbar);
 
 sol.X = Xs;
 %sol.Xest = Xest;
@@ -201,9 +243,13 @@ sol.T = Ts;
 sol.U = U;
 sol.D = D;
 sol.Y = Y;
+sol.Xc = Xc;
+sol.Tc = Tc;
+%sol.INFO = INFO;
 sol.bonked_k = bonked_k;
+sol.controller = nlobj;
 
 %vytiskne øe¹ení
 sol
 
-save('ResultsMPC2.mat', 'sol');
+save('ResultsMPC7.mat', 'sol');
