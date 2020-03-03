@@ -16,15 +16,18 @@ function [] = animRefresh(Ts, Xs, Wx, k)
         axis equal
         %xlim([xc*1-0.1-L_p*0.5, xc*1+0.1+L_p*0.5])
         xlim([-1.1, 1.1]);
-        ylim([-0.2, 0.6]);
+        ylim([-0.6, 0.6]);
 
         quiver( xc, 0,...
             xp, yp,...
             'Color', 'Black',...
             'LineWidth', 2,...
-            'Marker', '*');
+            'Marker', 'o')
         
-        plot(Wx(k,1), 0.45, 'bO');
+        if (Wx ~= [])
+            plot(Wx(k,1), 0.45, 'bO');
+        end
+            
 
         drawnow
     end

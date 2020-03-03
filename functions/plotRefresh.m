@@ -12,8 +12,12 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 1), "LineWidth", 2, 'Color', 'b');
-    plot(time, Wx(k-Ka:k), "LineWidth", 2, 'LineStyle', '-.', 'Color', 'g');
-    plot(time, Xest(k-Ka:k, 1), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    if(Wx~=[])
+        plot(time, Wx(k-Ka:k), "LineWidth", 2, 'LineStyle', '-.', 'Color', 'g');
+    end
+    if(Xest~=[])
+        plot(time, Xest(k-Ka:k, 1), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    end
 %     xlabel('Time t [$s$]','interpreter','latex')
 %     ylabel('$x_c$ [$m$]', 'Interpreter', 'Latex')
 %     title('$x_c$', 'Interpreter', 'Latex')
@@ -23,7 +27,9 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 2), "LineWidth", 2, 'Color', 'b');
-    plot(time, Xest(k-Ka:k, 2), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    if(Xest~=[])
+        plot(time, Xest(k-Ka:k, 2), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    end
 %     xlabel('Time t [$s$]','interpreter','latex')
      xlim(xlims);
     
@@ -31,7 +37,9 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 3), "LineWidth", 2, 'Color', 'b');
-    plot(time, Xest(k-Ka:k, 3), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    if(Xest~=[])
+        plot(time, Xest(k-Ka:k, 3), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    end
 %     xlabel('Time t [$s$]','interpreter','latex')
 %     ylabel('$\dot{x_c}$ [$\frac{m}{s}$]', 'Interpreter', 'Latex')
 %     title('$\dot{x_c}$', 'Interpreter', 'Latex')
@@ -41,7 +49,9 @@ figure(1);
     hold on
     grid on
     plot(time, Xs(k-Ka:k, 4), "LineWidth", 2, 'Color', 'b');
-    plot(time, Xest(k-Ka:k, 4), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    if(Xest~=[])
+        plot(time, Xest(k-Ka:k, 4), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r');
+    end
 %     xlabel('Time t [$s$]','interpreter','latex')
 %     ylabel('$\dot{\alpha}$ [$\frac{rad}{s}$]', 'Interpreter', 'Latex')
 %     title('$\dot{\alpha}$', 'Interpreter', 'Latex')

@@ -27,59 +27,87 @@ p.J_eq = p.M_c + p.eta_g*p.K_g^2*p.J_m/p.r_mp^2;
     %X_operating je stavovy bod pro linearizaci
     X_operating = [0 pi 0 0];
     [A,B,C,D] = ABCD(X_operating, 0, p)
+%     
+%     model.Plant = ss(A,B,C,D);
+%     
+%     model.Nominal = [];
+%     model.Nominal.X = X_operating;
+%     model.Nominal.U = 0;
+%     model.Nominal.Y = X_operating(1:2);
+%     model.Nominal.DX = zeros(1,4);
+%     
+%     OV = struct();
+%     OV(1).Name = "x_c";
+%     OV(2).Name = "alpha";
+%     
+%     OV(1).Max = 1;
+%     OV(1).Min = -1;
+%     
+%     MV = struct();
+%     MV(1).Name = "u";
+%     
+%     MV(1).Max = 12;
+%     MV(1).Min = -12;
+%     
+%     dt = 0.10;
+%     pH= 20; %Prediction horizon
+%     cH = 7; %Control horizon
+%     controller_MPC = mpc(model, dt, pH, cH, [], MV, OV);
     
-    Q = diag([10 10 1 1]);
-    R = 0.15;
-    K_lqr = lqr(A,B,Q,R)
-    disp(eigs(A-B*K_lqr))
-    
-    %pole = [ -2, -2.1, -2.2, -2.3];
-    %K_pp = place(A,B,pole)
-    %disp(eigs(A-K_pp*B))
-%% Navrh estimatoru
+nx = 4;
+ny = 2;
+nu = 1;
+dt = 0.1;
+nlobj = nlmpc(nx, ny, nu);
 
-    Vd = 1*diag(4);      %disturbance covariance
-    Vd(1,1) = 10;
-    
-    Vn = [100 0; 0 0.5];                 %noise covariance
+nlobj.PredictionHorizon = 15;
+nlobj.ControlHorizon = 5;
 
-    Af = A-B*K_lqr;
-    Bf = B*K_lqr
-    
-    Cf = eye(4); 
-    
-    Kf = (lqr(Af', C', Vd, Vn))';
-    
-    KF = ss(Af-Kf*C, [Bf Kf], Cf, 0*[Bf Kf]);
-    disp(eigs(KF.A))
+nlobj.Model.StateFcn = @(X, u) pendulumCart(X ,u ,[0 0],p);
+nlobj.Jacobian.StateFcn = @(X, u) ABCD(X, u, p);
+nlobj.Model.IsContinuousTime = true;
+nlobj.Model.NumberOfParameters = 0;
+nlobj.Model.OutputFcn = @(X, u) [X(1); X(2)];
+nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 1 0 0];
+
+nlobj.Weights.OutputVariables = [3 6];
+
+nlobj.OV(1).Min = -1;
+nlobj.OV(1).Max = 1;
+
+nlobj.MV.Min = -12;
+nlobj.MV.Max = 12;
+
+validateFcns(nlobj, X_operating, 0, [])
+
+%% Navrh EKF
+
+%EKF = extendedKalmanFilter(@(X, u) pendulumCart(X, u, [0 0], p), ...
+%    @(X, u) [X(1); X(2)]);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
 X = [0, pi, 0, 0]; %alpha, dAlpha, xc, dXc
-%pozadovany stav
-W = [0, pi, 0, 0];
-Wrel = W - X_operating;
+%EKF.State = X;
 
 %nastaveni solveru
 options = odeset();
 
 simulationTime = 1e2;
-dt = 0.02; %samplovaci perioda
+dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
 
 %predalokace poli pro data
 Xs = zeros(simulationTime/dt, 4); %skutecny stav
 Xs(1,:) = X;
-Xest = zeros(simulationTime/dt, 4); %estimovany stav
-Xest(1,:) = X - X_operating;
 Ts = zeros(simulationTime/dt, 1);   %cas
 U = zeros(simulationTime/dt, 1);   %vstupy
 U(1) = 0;
 Wx = zeros(simulationTime/dt, 1); %pozadovana poloha xc
 D = zeros(simulationTime/dt, 2); %poruchy
 Y = zeros(simulationTime/dt, 2); %mereni
-Y(1,:) = X(1, 1:2) - X_operating(1:2);
+Y(1,:) = X(1, 1:2);
 Wx(1) = W(1);
 
 d = [0 0];
@@ -90,6 +118,9 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
+yref1 = [0 0];
+yref2 = [0 pi];
+
 bonked_k = -1;
 k_afterBonk = 0;
 
@@ -98,80 +129,19 @@ hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
-    % Soucasny stav
-    X = Xs(k,:);
-    
-    % Generovani pozadovaneho stavu
-    if rand(1) > 0.99      
-        W = [(2*rand(1)-1)*0.50, pi, 0, 0];
-        %W = [sign(2*rand(1)-1)*0.9, pi, 0, 0];
-        %W = [sin(pi/16*k*dt), pi, 0, 0];
-        Wrel = W - X_operating;
-    end
-    
-    %% Generovani poruchy
-    if rand(1) > 0.99      %sila
-        d(1) = randn(1)*.5;
-        d1T = randn(1)*100;
-        d1t = 0;
-        d1a = 1;
-        %disp("Porucha d1")
-        %disp(d(1))
-        %disp(d1T)
-    end
-    
-    if rand(1) > 0.99      %moment
-        d(2) = randn(1)*.5;
-        d2T = randn(1)*100;
-        d2t = 0;
-        d2a = 1;
-        %disp("Porucha d2")
-        %disp(d(2))
-        %disp(d2T)
-    end
-    
-    if d1a==1
-        d1t = d1t + 1;
-        if (d1t >= d1T)
-            d(1) = 0;
-        end
-    end
-    
-    if d2a==1
-        d2t = d2t + 1;
-        if (d2t >= d2T)
-            d(2) = 0;
-            d2a = 0;
-        end
-    end
-    
-
-
-    %% Regulace
-    %definice vstupu a saturace do <-12,12>
-    Xr = Xest(k,:) + X_operating;
-    if(Xr(1)<0.99 && Xr(1)>-0.99)
-        u = -K_lqr * ( Xr' - W' );
-        u = min(12, max(-12, u));
-    elseif(Xr(1)>0.99)
-        u = 0
-        disp("!")
-    elseif(Xr(1)<-0.99)
-        u = 0;
-        disp("!")
+    %% Generovani pozadovaneho stavu
+    if k*dt < 50
+        yref = yref1;
+    else
+        yref = yref2;
     end
     
     %% Estimace stavu X
-    xe = Xs(k,:)' - X_operating';
-    y = Y(k, :)';
-    yError = y - C*xe;
-    %dxeA = KF.A*xe;
-    %dxeB = KF.B * [Wrel'; yError];
-    %dxeBW = KF.B(:, 1:4)*Wrel';
-    %dxeBYERROR = KF.B(:, 5:6)*yError;
-    dxe = KF.A*xe + KF.B*[Wrel'; yError];
-    Xest(k+1, :) = xe+dxe*dt; 
-       % Xest are coords relative to X_operating
+    %xe = correct(EKF, Y(k, :));
+    %% Regulace
+    [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
+    %predict(EKF, [u; dt]);    
+    u
 
     %% Simulace
     
@@ -203,7 +173,7 @@ for k = 1:simulationTime/dt
     D(k+1, :) = d;
     
     % mereni Y
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.1 randn(1)*0.1]' - X_operating(1:2)';
+    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.001 randn(1)*0.001]';
     
     
     %% Vizualizace
@@ -211,7 +181,7 @@ for k = 1:simulationTime/dt
     
     %refresh plotu
     if(mod(k+1,kRefreshPlot)==1)
-        %plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
+       %plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
     end
     
     %refresh animace
@@ -240,7 +210,7 @@ end
 close(hbar);
 
 sol.X = Xs;
-sol.Xest = Xest;
+%sol.Xest = Xest;
 sol.T = Ts;
 sol.U = U;
 sol.Wx = Wx;
@@ -251,4 +221,4 @@ sol.bonked_k = bonked_k;
 %vytiskne øe¹ení
 sol
 
-save('Results1.mat', 'sol');
+save('ResultsMPC.mat', 'sol');
