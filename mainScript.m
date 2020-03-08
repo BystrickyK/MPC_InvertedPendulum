@@ -65,7 +65,7 @@ options = odeset();
 
 simulationTime = 1e2;
 dt = 0.02; %samplovaci perioda
-kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+kRefreshPlot = 50; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
 
 %predalokace poli pro data
@@ -211,12 +211,12 @@ for k = 1:simulationTime/dt
     
     %refresh plotu
     if(mod(k+1,kRefreshPlot)==1)
-        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
+        %plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot);
     end
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-        animRefresh(Ts,Xs,Wx,k);
+        animRefresh(Xs(k,:),Wx(k,:));
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
