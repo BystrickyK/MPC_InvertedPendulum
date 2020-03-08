@@ -5,7 +5,7 @@ addpath('functions')
 addpath('gif')
 
 
-data = load('ResultsMPC9.mat');
+data = load('ResultsMPC11.mat');
 data = data.sol;
 Xc = data.Xc;
 Tc = data.Tc;
@@ -18,9 +18,10 @@ kRefreshAnim = 1; % ^
 
 figure("Name", "Computing times")
 bar(Ts(1:end-1), computingTimes);
+grid on
 
-% animRefresh(Ts,Xs,[],1);
-% gif('NLMPC_Swingup_dt10_sawtooth_lowV.gif')
+animRefresh(Ts,Xs,[],1);
+gif('NLMPC10_dt0075.gif')
 tic
 for k = 2:15:samples
     %% Vizualizace
@@ -28,7 +29,7 @@ for k = 2:15:samples
     if(mod(k,kRefreshAnim)==0)
         animRefresh(Tc,Xc,[],k);
         title(Tc(k))
-%         gif
+        gif
     end
     
     if(mod(k,10000)==0)

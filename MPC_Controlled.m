@@ -45,8 +45,8 @@ ny = 2;
 nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
-nlobj.PredictionHorizon = 8;
-nlobj.ControlHorizon = 4;
+nlobj.PredictionHorizon = 6;
+nlobj.ControlHorizon = 6;
 dt = 0.075;
 nlobj.Ts = dt;
 
@@ -69,10 +69,10 @@ nlobj.MV.Max = 12;
 nlobj.Optimization.UseSuboptimalSolution = true;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.MaxIter = 5;
-nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-3;
+nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
 nlobj.Optimization.SolverOptions.UseParallel = true;
-nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-3;
-nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 100*sqrt(eps);
+nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
+nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 10*sqrt(eps);
 
 % nloptions = nlmpcmoveopt;
 % nloptions.Parameters = {dt};
@@ -275,5 +275,6 @@ sol
 
     figure('Name', 'Computing times')
     bar(Ts(1:end-1), computingTimes);
+    grid on
 
-save('ResultsMPC9.mat', 'sol');
+save('ResultsMPC11.mat', 'sol');
