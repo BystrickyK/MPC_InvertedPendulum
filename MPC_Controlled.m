@@ -23,44 +23,62 @@ p.r_mp = 6.35e-3; %motor pinion radius (prumer pastorku)
 p.M_c = 0.38; %cart mass
 p.J_m = 3.9e-7; %motor moment of inertia
 p.J_eq = p.M_c + p.eta_g*p.K_g^2*p.J_m/p.r_mp^2;
-%%  Navrh regulatoru
-    %X_operating je stavovy bod pro linearizaci
-    X_operating = [-0.4 pi 0 0];
-    [A,B,C,D] = ABCD(X_operating, 0, p)
-    
+
+syms Y [1 4]
+syms d [1 2]
+syms u 
+pendCart = pendulumCart(Y,u,d,p);
+pendCart = subs(pendCart, d, [0 0]);
+matlabFunction(pendCart,...
+    'file','functions/pendCartC',...
+    'vars', {[Y1; Y2; Y3; Y4], u});
+
+
+[A,B,C,D] = ABCD(Y,u,p);
+matlabFunction(A, B,...
+    'file', 'functions/AB',...
+    'vars', {[Y1; Y2; Y3; Y4], u});
+
+%%  Navrh regulatoru    
 nx = 4;
 ny = 2;
 nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
-nlobj.PredictionHorizon = 10;
-nlobj.ControlHorizon = 5;
-dt = 0.1;
+nlobj.PredictionHorizon = 8;
+nlobj.ControlHorizon = 4;
+dt = 0.075;
 nlobj.Ts = dt;
 
-nlobj.Model.StateFcn = @(X, u) pendulumCart(X ,u ,[0 0],p);
-nlobj.Jacobian.StateFcn = @(X, u) ABCD(X, u, p);
+nlobj.Model.StateFcn = 'pendCartC';
+nlobj.Jacobian.StateFcn = 'AB';
 nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(2), 0.5)];
 %nlobj.Jacobian.OutputFcn = @(X, u) [1 0 0 0; 0 -sin(X(2)) 0 0];
 
 nlobj.Weights.OutputVariables = [8 4];
-%nlobj.Weights.ManipulatedVariablesRate = 0.1;
+nlobj.Weights.ManipulatedVariablesRate = 0.001;
 
 nlobj.OV(1).Min = -0.5;
 nlobj.OV(1).Max = 0.5;
 
-nlobj.MV.Min = -5;
-nlobj.MV.Max = 5;
-
+nlobj.MV.Min = -12;
+nlobj.MV.Max = 12;
+ 
 nlobj.Optimization.UseSuboptimalSolution = true;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
-nlobj.Optimization.SolverOptions.MaxIter = 12;
+nlobj.Optimization.SolverOptions.MaxIter = 5;
+nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-3;
+nlobj.Optimization.SolverOptions.UseParallel = true;
+nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-3;
+nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 100*sqrt(eps);
 
+% nloptions = nlmpcmoveopt;
+% nloptions.Parameters = {dt};
 
-
-validateFcns(nlobj, X_operating, 0, [])
+X = [0; 0; 0; 0];
+validateFcns(nlobj, X, 0, [])
 
 %% Navrh EKF
 
@@ -75,10 +93,10 @@ X = [0, 0, 0, 0]; %alpha, dAlpha, xc, dXc
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 12;
+simulationTime = 24;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 1; % ^
+kRefreshAnim = 5; % ^
 
 %predalokace poli pro data
 Xs = zeros(simulationTime/dt, 4); %skutecny stav
@@ -110,7 +128,7 @@ bonked_k = -1;
 k_afterBonk = 0;
 
 %% Simulace
-%hbar = waitbar(0,'Simulation Progress');
+hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
@@ -151,39 +169,40 @@ for k = 1:simulationTime/dt
 %         end
 %     end
     %% Generovani pozadovaneho stavu
-    T = mod(k*dt, 12)
-    if( T == 0 )
-        yref = yref1;
-    elseif ( T == 8)
-        yref = yref2;
+    T = k*dt
+    if( mod(T, 4.5) == 0)
+        if(yref == yref1)
+            yref = yref2;
+        else
+            yref = yref1;
+        end
     end
     
     %% Estimace stavu X
     %xe = correct(EKF, Y(k, :));
     %% Regulace
     tic
-    
     [u, nloptions, info] = nlmpcmove(nlobj, Xs(k,:), U(k), yref, []);
+    computingTimes(k) = toc;
     %INFO(k) = info;
 %    predict(EKF, [u; dt]);    
-    figure(4)
-    subplot(321)
-    plot(info.Topt, info.Xopt(:,1), 'bo-');
-    grid on
-    subplot(322)
-    plot(info.Topt, info.Xopt(:,2), 'bo-');
-    grid on
-    subplot(323)
-    plot(info.Topt, info.Xopt(:,3), 'ro-');
-    grid on
-    subplot(324)
-    plot(info.Topt, info.Xopt(:,4), 'ro-');
-    grid on
-    subplot(313)
-    stairs(info.Topt, info.MVopt(:,1), 'ko-');
-    grid on
-        
-    computingTimes(k) = toc;
+%     figure(4)
+%     subplot(321)
+%     plot(info.Topt, info.Xopt(:,1), 'bo-');
+%     grid on
+%     subplot(322)
+%     plot(info.Topt, info.Xopt(:,2), 'bo-');
+%     grid on
+%     subplot(323)
+%     plot(info.Topt, info.Xopt(:,3), 'ro-');
+%     grid on
+%     subplot(324)
+%     plot(info.Topt, info.Xopt(:,4), 'ro-');
+%     grid on
+%     subplot(313)
+%     stairs(info.Topt, info.MVopt(:,1), 'ko-');
+%     grid on
+%         
     disp("Computing time: " + computingTimes(k))
     disp(k + "/" + simulationTime/dt);
 
@@ -215,7 +234,7 @@ for k = 1:simulationTime/dt
     
     %refresh animace
     if(mod(k,kRefreshAnim)==0)
-        animRefresh(Ts,Xs,[],k);
+%         animRefresh(Ts,Xs,[],k);
     end
       
     %progress meter a vypocetni cas na 1000 vzorku
@@ -233,10 +252,10 @@ for k = 1:simulationTime/dt
         break
     end
     
-    %waitbar(k*dt/simulationTime,hbar);
+    waitbar(k*dt/simulationTime,hbar);
 end
 
-%close(hbar);
+close(hbar);
 
 sol.X = Xs;
 %sol.Xest = Xest;
