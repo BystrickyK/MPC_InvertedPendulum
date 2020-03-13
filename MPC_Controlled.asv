@@ -57,9 +57,9 @@ nlobj.OV(1).Max = 0.5;
 nlobj.MV.Min = -12;
 nlobj.MV.Max = 12;
  
-nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
-nlobj.Optimization.SolverOptions.MaxIter = 8;
+% nlobj.Optimization.UseSuboptimalSolution = true;
+% nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
+nlobj.Optimization.SolverOptions.MaxIter = 7;
 nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
 nlobj.Optimization.SolverOptions.UseParallel = true;
 nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
@@ -73,10 +73,8 @@ validateFcns(nlobj, X, 0, [])
 
 %% Navrh EKF
 
-EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u), ...
+EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u,dt), ...
                            @(X) [X(1); X(2)]);
-EKF.MeasurementNoise = 5*eye(2);
-EKF.ProcessNoise = 1*eye(4);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
@@ -144,15 +142,15 @@ for k = 1:simulationTime/dt
     computingTimes(k) = toc;
     
           %Vizualizace predikce
-%           figure(4)
-%           for i = 1:4
-%               subplot(3,2,i)
-%               plot(info.Topt, info.Xopt(:,i), 'ko-')
-%               grid on
-%           end
-%           subplot(313)
-%           stairs(info.Topt, info.MVopt(:,1), 'ko-');
-%           grid on
+          figure(4)
+          for i = 1:4
+              subplot(3,2,i)
+              plot(info.Topt, info.Xopt(:,i), 'ko-')
+              grid on
+          end
+          subplot(313)
+          stairs(info.Topt, info.MVopt(:,1), 'ko-');
+          grid on
         
           %Vypocetni cas
           disp("Computing time: " + computingTimes(k))
@@ -172,7 +170,7 @@ for k = 1:simulationTime/dt
     Tc = [Tc; ts];
     
     %% Mereni a predikce EKF
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.01 randn(1)*0.01]';  
+    Y(k+1, :) = C * xs(end,:)' ;  
     predict(EKF, u);
 
     waitbar(k*dt/simulationTime,hbar);
@@ -189,7 +187,7 @@ sol.Y = Y;
 sol.Xc = Xc;
 sol.Tc = Tc;
 %sol.INFO = INFO;
-% sol.bonked_k = bonked_k;
+sol.bonked_k = bonked_k;
 sol.controller = nlobj;
 sol.computingTimes = computingTimes;
 
@@ -200,4 +198,4 @@ sol
     bar(Ts(1:end-1), computingTimes);
     grid on
 
-save('results/ResultsMPC11.mat', 'sol');
+save('ResultsMPC11.mat', 'sol');

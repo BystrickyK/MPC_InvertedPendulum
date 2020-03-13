@@ -3,6 +3,7 @@ close all
 
 addpath('functions')
 addpath('gif')
+addpath('results')
 
 
 data = load('ResultsMPC11.mat');
@@ -21,17 +22,17 @@ bar(Ts(1:end-1), computingTimes);
 grid on
 
 animRefresh(Ts,Xs,[],1);
-gif('NLMPC10_dt0075.gif')
+% gif('NLMPC10_dt0075.gif')
 tic
-for k = 2:15:samples
+for k = 2:5:samples
     %% Vizualizace
     
     if(mod(k,kRefreshAnim)==0)
         animRefresh(Tc,Xc,[],k);
         title(Tc(k))
-        gif
+%         gif
     end
-    
+        
     if(mod(k,10000)==0)
         disp("Time for 10000 samples:" + toc)
         tic
