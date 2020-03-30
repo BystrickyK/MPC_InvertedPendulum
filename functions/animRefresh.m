@@ -1,4 +1,4 @@
-function [] = animRefresh(Ts, Xs, Wx, k)
+function [] = animRefresh(Xs, Wx, k)
     
     figure(2);
     % animaci lze zrychlit pomocí úpravy kroku, napø. p?i 1:3:rows_ se

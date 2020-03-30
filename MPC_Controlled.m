@@ -7,30 +7,8 @@ addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
 % Definice parametr? soustavy
 p = getParameters();
 
-% Dosazení známých parametr? do stavových rovnic nelineárního modelu
-% Neznámé "?ídící" prom?nné jako stavový vektor |Y|, poruchy |d|, a ak?ní
-% veli?ina |u| se dosadí jako symbolické.
-syms Y [1 4] %   Y [1 4] = stavový vektor, sloupcový 4x1 
-syms d [1 2]
-syms u
-% Vytvo?íme symbolické rovnice s dosazenými parametry
-dXdt = pendulumCart(Y,u,d,p);
-% Za poruchu dosazuji 0. Poruchy jsou dv?, jedna pro sílu a jedna pro
-% moment -> proto je porucha d vektor 2x1
-dXdt = subs(dXdt, d, [0 0]);
-% Ze symbolické rovnice vytvo?íme function handler, který uložíme jako .m
-% file do složky functions. Vytvo?ená funkce vrací 4x1 vektor dY.
-matlabFunction(dXdt,...
-    'file','functions/pendCartC',...
-    'vars', {[Y1; Y2; Y3; Y4], u});
-
-% Podobn? se postupuje p?i dosazování parametr? do rovnice linearizovaného
-% popisu. Vytvo?ená funkce vrací dv? matice, A a B.
-[A,B,C,~] = ABCD(Y,u,p);
-matlabFunction(A, B,...
-    'file', 'functions/AB',...
-    'vars', {[Y1; Y2; Y3; Y4], u});
-
+initializeModel();
+C = [1 0 0 0; 0 1 0 0];
 %%  Navrh regulatoru    
 nx = 4;
 ny = 2;
@@ -38,7 +16,7 @@ nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
 nlobj.PredictionHorizon = 5;
-nlobj.ControlHorizon = 5;
+nlobj.ControlHorizon = 3;
 dt = 0.1;
 nlobj.Ts = dt;
 
@@ -48,8 +26,8 @@ nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(2), 0.5)];
 
-nlobj.Weights.OutputVariables = [8 4];
-nlobj.Weights.ManipulatedVariablesRate = 0.0001;
+nlobj.Weights.OutputVariables = [4 4];
+nlobj.Weights.ManipulatedVariablesRate = 0.001;
 
 nlobj.OV(1).Min = -0.5;
 nlobj.OV(1).Max = 0.5;
@@ -58,12 +36,12 @@ nlobj.MV.Min = -12;
 nlobj.MV.Max = 12;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
-nlobj.Optimization.SolverOptions.MaxIter = 8;
-nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
-nlobj.Optimization.SolverOptions.UseParallel = true;
-nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
-nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 10*sqrt(eps);
+%  nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
+ nlobj.Optimization.SolverOptions.MaxIter = 5;
+% nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
+% nlobj.Optimization.SolverOptions.UseParallel = true;
+% nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
+% nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 10*sqrt(eps);
 
 % nloptions = nlmpcmoveopt;
 % nloptions.Parameters = {dt};
@@ -73,20 +51,20 @@ validateFcns(nlobj, X, 0, [])
 
 %% Navrh EKF
 
-EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u), ...
+EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u,dt/10), ...
                            @(X) [X(1); X(2)]);
-EKF.MeasurementNoise = 5*eye(2);
+EKF.MeasurementNoise = diag([0.01 0.01]);
 EKF.ProcessNoise = 1*eye(4);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
 X = [0 0 0 0]; %alpha, dAlpha, xc, dXc
 EKF.State = X;
-
+u = 0;
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 40;
+simulationTime = 42;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
@@ -118,50 +96,50 @@ yref1 = [0 1];
 yref2 = [0 -1];
 yref = yref1;
 
-bonked_k = -1;
-k_afterBonk = 0;
-
 %% Simulace
 hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
-for k = 1:simulationTime/dt
+for k = 1:simulationTime/dt*10
     %% Generovani pozadovaneho stavu
-    T = k*dt
-    if( mod(T, 4.5) == 0)
-        if(yref == yref1)
-            yref = yref2;
-        else
-            yref = yref1;
-        end
-    end
+    T = mod(k*dt/10, 10);
     
+    if( mod(T, 0) == 0)
+            yref = yref1;
+            
+    elseif( mod(T, 6.5) == 0)
+            yref = yref2;
+    end
+       
     %% Estimace stavu X; pouziti mereni pro korekci predpovedi
     Xest(k,:) = correct(EKF, Y(k, :));
     %% Regulace
-    tic
-    [u, nloptions, info] = nlmpcmove(nlobj, Xest(k,:), U(k), yref, []);
-    computingTimes(k) = toc;
-    
-          %Vizualizace predikce
-%           figure(4)
-%           for i = 1:4
-%               subplot(3,2,i)
-%               plot(info.Topt, info.Xopt(:,i), 'ko-')
-%               grid on
-%           end
-%           subplot(313)
-%           stairs(info.Topt, info.MVopt(:,1), 'ko-');
-%           grid on
+    if(mod(k,10)==0)
         
-          %Vypocetni cas
-          disp("Computing time: " + computingTimes(k))
-          disp(k + "/" + simulationTime/dt);
+        tic
+        [u, nloptions, info] = nlmpcmove(nlobj, Xest(k,:), U(k), yref, []);
+        computingTimes(k) = toc;
+
+              %Vizualizace predikce
+    %           figure(4)
+    %           for i = 1:4
+    %               subplot(3,2,i)
+    %               plot(info.Topt, info.Xopt(:,i), 'ko-')
+    %               grid on
+    %           end
+    %           subplot(313)
+    %           stairs(info.Topt, info.MVopt(:,1), 'ko-');
+    %           grid on
+
+              %Vypocetni cas
+              disp("Computing time: " + computingTimes(k))
+              disp(k + "/" + simulationTime/dt);
+    end
 
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
-    [ts, xs] = ode45(@(t, X) pendulumCart(X,u,d,p), [(k-1)*dt k*dt], Xs(k,:), options);
+    [ts, xs] = ode45(@(t, X) pendulumCart_symbolicPars(X,u,d,p), [(k-1)*dt/10 k*dt/10], Xs(k,:), options);
 
 	Xs(k+1,:) = xs(end,:);
     Ts(k+1) = ts(end);
@@ -172,11 +150,11 @@ for k = 1:simulationTime/dt
     Tc = [Tc; ts];
     
     %% Mereni a predikce EKF
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.01 randn(1)*0.01]';  
+    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.001 randn(1)*0.01]';  
     predict(EKF, u);
 
     waitbar(k*dt/simulationTime,hbar);
-end
+    end
 
 close(hbar);
 
@@ -188,6 +166,7 @@ sol.D = D;
 sol.Y = Y;
 sol.Xc = Xc;
 sol.Tc = Tc;
+sol.dt = dt;
 %sol.INFO = INFO;
 % sol.bonked_k = bonked_k;
 sol.controller = nlobj;
@@ -200,4 +179,4 @@ sol
     bar(Ts(1:end-1), computingTimes);
     grid on
 
-save('results/ResultsMPC11.mat', 'sol');
+save('results/ResultsMPC12.mat', 'sol');

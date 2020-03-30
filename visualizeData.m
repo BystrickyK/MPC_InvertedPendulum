@@ -5,7 +5,7 @@ addpath('gif')
 addpath('results')
 
 
-data = load('ResultsMPC11.mat');
+data = load('ResultsMPC12.mat');
 data = data.sol;
 
 samples = length(data.X);
@@ -28,27 +28,24 @@ if (isfield(data, 'computingTimes'))
 end
 
 
-kRefreshPlot = 5; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 1; % ^
+kRefreshPlot = 10; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+kRefreshAnim = 1; % ~ ^
 
-        %animRefresh(Ts,Xs,[],1);
-        %gif('NLMPC_Swingup_dt10_sawtooth_highV.gif')
 for k = 2:1:samples-1
     %% Vizualizace
     if(mod(k,kRefreshPlot)==0)
-       plotRefresh(Ts,Xs,Xest,[],U,D,Y,k,kRefreshPlot);
+       plotRefresh(Ts,Xs,Xest,[],U,D,Y,k,kRefreshPlot); % MPC
+%        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot); %LQG
     end
     
     if(mod(k,kRefreshAnim)==0)
-        animRefresh(Ts,Xs,[],k);
-        title(k)
-        %gif
+        animRefresh(Xs,[],k); %MPC
+%         animRefresh(Xs,Wx,k); %LQG
+        title(k*data.dt)
     end
         
     if(mod(k,10000)==0)
         disp("Time for 10000 samples:" + toc)
-        tic
     end
     
-    pause(0.05)
 end

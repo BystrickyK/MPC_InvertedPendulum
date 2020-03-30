@@ -23,6 +23,7 @@ function [] = plotRefresh(Ts, Xs, Xest, Wx, U, D, Y, k, Ka)
     if(~isempty(Xest))
         plot(time, Xest(k-Ka:k, 1), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r', 'Marker', 'x');
     end
+    xlim(xlims);
     
     for i = 2:4
         subplot(2,2,i);
@@ -44,7 +45,7 @@ figure(3)
         subplot(5,1,i);
         hold on 
         grid on
-        plot(time, data(k-Ka:k, i),...
+        stairs(time, data(k-Ka:k, i),...
             'LineWidth', 1, 'Color', 'r', 'Marker', 'x');
         xlim(xlims);
 

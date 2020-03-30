@@ -6,31 +6,31 @@ addpath('gif')
 addpath('results')
 
 
-data = load('ResultsMPC11.mat');
+data = load('ResultsMPC12.mat');
 data = data.sol;
 Xc = data.Xc;
 Tc = data.Tc;
-computingTimes = data.computingTimes;
+% computingTimes = data.computingTimes;
 
 samples = length(Tc);
 
-kRefreshPlot = 10; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 1; % ^
 
-figure("Name", "Computing times")
-bar(Ts(1:end-1), computingTimes);
-grid on
+kRefreshAnim = 100; 
 
-animRefresh(Ts,Xs,[],1);
-% gif('NLMPC10_dt0075.gif')
+% figure("Name", "Computing times")
+% bar(Ts(1:end-1), computingTimes);
+% grid on
+
+animRefresh(Xs,[],1);
+gif('NLMPC12_dt01_fastKF.gif')
 tic
-for k = 2:5:samples
+for k = 2:1:40000
     %% Vizualizace
     
     if(mod(k,kRefreshAnim)==0)
-        animRefresh(Tc,Xc,[],k);
+        animRefresh(Xc,[],k);
         title(Tc(k))
-%         gif
+        gif
     end
         
     if(mod(k,10000)==0)
