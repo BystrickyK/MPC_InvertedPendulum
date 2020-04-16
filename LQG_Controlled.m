@@ -37,22 +37,24 @@ initializeModel();
     obsv_ = obsv(A,Co);
     obsvr = rank(obsv_);
 
-    Vd = 1*eye(4); % process noise covariance matrix
-    Vd = diag([1 1 1 1]);
+    % process noise covariance matrix
+    Vd = diag([0.1 0.1 0.1 0.1]);
     
-    Vn = [0.001 0; 0 0.001]; %noise covariance matrix
+    %noise covariance matrix
+    Vn = [1 0; 0 1];
     
 %    L = (lqr(A', Co', Vd, Vn))';
-    L = lqe(A,Vd,Co,Vd,Vn);
+    Ar = A-B*K_lqr;
+    L = lqe(Ar,Vd,Co,Vd,Vn);
 %     Af = A-Kf*C;
 %     Bf = [B Kf];
     Cf = eye(4);
-    KF = ss((A-L*Co), B, eye(4), 0);
+    KF = ss((A-L*Co), L, eye(4), 0);
     disp(eigs(KF.A));
-
+ 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X0 = [0,pi*19/20,0,0]'; %x, alpha, dx, dalpha
+X0 = [0,pi*29/30,0,0]'; %x, alpha, dx, dalpha
 %pozadovany stav
 r = 0;
 % Wrel = W - X_operating;
@@ -97,8 +99,10 @@ tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
     % Soucasny stav  
-    % Generovani pozadovaneho stavu
-    
+    % Generovani pozadovane reference
+    if rand(1) > 0.99      
+        r = (2*rand(1)-1)*0.50
+    end
     %% Generovani poruchy
 %     if rand(1) > 0.99      %sila
 %         d(1) = randn(1)*5;
@@ -140,16 +144,18 @@ for k = 1:simulationTime/dt
     %definice vstupu a saturace do <-12,12>
     
 %     e = [Xest(:,k); Ksi(k)]; %vektor v rozsirenem stavovem prostoru
-      x = X(:,k) - X_operating;
+      Xr = [r 0 0 0]';
+      Xerr = Xr - Xest(:,k)
 %       u = -K_lqr * x;
-      u = -K_lqr * Xest(:,k);
+      u = -K_lqr*Xerr;
 %     u = min(12, max(-12, u));
     %% Estimace stavu X
-    y_est = Co * Xest(:,k);
+
+    y_est = Co * X(:,k);
     y_msr = Y(:,k);
     y_err = y_msr - y_est;
-    Dxe = KF.A*Xest(:,k) + KF.B*u + L*y_err;
-    disp("est: " + y_est + "  msr: " + y_msr + "  y_err: " + y_err)
+    Dxe = KF.A*Xest(:,k) + KF.B*y_err;
+%     disp("est: " + y_est + "  msr: " + y_msr + "  y_err: " + y_err)
     Xest(:,k+1) = Xest(:,k) + Dxe*dt; % Euler method
     %% Simulace
     
@@ -203,7 +209,7 @@ close(hbar);
 
 
 sol.X = X;
-sol.Xest = Xest;
+sol.Xest = Xest + X_operating;
 sol.T = Ts;
 sol.U = U;
 sol.R = R;

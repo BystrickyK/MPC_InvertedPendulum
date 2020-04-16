@@ -9,7 +9,7 @@ addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
 p = getParameters();
 initializeModel();
 %%  Navrh regulatoru
-    X_operating = [0 pi 0 0]';
+    X_operating = [0 0 0 0]';
     [A, B] = AB(X_operating, 0);
     Co = [1 0 0 0; 0 1 0 0]; % observed outputs | measuring xc and alpha
     Cr = [1 0 0 0]; % reference outputs
@@ -25,31 +25,35 @@ initializeModel();
          Cr, 0];
     Bh = [B; 0];
  
-    Q = diag([1 1 0.01 0.01]);
-    R = 0.5;
+    Q = diag([25 50 0.1 0.1]);
+    R = 0.1;
     K_lqr = lqr(A,B,Q,R);
     disp(eigs(A-B*K_lqr));
+    
+%     K_lqr = place(A,B,[-1+0.01j, -1-0.01j, -0.5+0.01j, -0.5-0.01j])
+%         disp(eigs(A-B*K_lqr));
     
 %% Navrh estimatoru
     obsv_ = obsv(A,Co);
     obsvr = rank(obsv_);
 
-    Vd = 5*eye(4); % process noise covariance matrix
+    % process noise covariance matrix
+    Vd = diag([0.1 0.1 0.1 0.1]);
     
-    Vn = [0.1 0; 0 0.1]; %noise covariance matrix
+    %noise covariance matrix
+    Vn = [1 0; 0 1];
     
-    L = (lqr(A', Co', Vd, Vn))';
-    L = place(A', Co', 5*(A-B*K_lqr))
-%      L = lqe(A,Vd,Co,Vd,Vn);
+%    L = (lqr(A', Co', Vd, Vn))';
+    L = lqe(A,Vd,Co,Vd,Vn);
 %     Af = A-Kf*C;
 %     Bf = [B Kf];
     Cf = eye(4);
-    KF = ss((A-L*Co), B, eye(4), 0);
-    disp(eigs(KF.A));
-
+    KF = ss((A-L*Co), [B L], eye(4), 0);
+%     disp(eigs(KF.A));
+ 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X0 = [0,pi*11/10,0,0]'; %x, alpha, dx, dalpha
+X0 = [0,pi*1/20,0,0]'; %x, alpha, dx, dalpha
 %pozadovany stav
 r = 0;
 % Wrel = W - X_operating;
@@ -57,8 +61,8 @@ r = 0;
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 3e0;
-dt = 0.02; %samplovaci perioda
+simulationTime = 5e1;
+dt = 0.01; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 1; % ^
 
@@ -68,15 +72,16 @@ X(:,1) = X0;
 DKsi = zeros(1,simulationTime/dt); %odchylka od reference
 Ksi = zeros(1,simulationTime/dt);
 Xest = zeros(4,simulationTime/dt); %estimovany stav
-Xest(:,1) = X0-X_operating;
+Xest(:,1) = X0 - X_operating;
 Ts = zeros(1,simulationTime/dt);   %spojity cas
 U = zeros(1,simulationTime/dt);   %vstupy
 U(1) = 0;
+u = 0;
 R = zeros(1,simulationTime/dt); %reference r
 R(1) = r;
 D = zeros(2,simulationTime/dt); %poruchy
 Y = zeros(2,simulationTime/dt); %mereni
-Y(:,1) = [X0(1); X0(2)];
+Y(:,1) = X0(1:2) - X_operating(1:2);
 
 %pocatecni porucha
 d = [0 0]; %vektor poruch
@@ -93,8 +98,10 @@ tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
     % Soucasny stav  
-    % Generovani pozadovaneho stavu
-    
+    % Generovani pozadovane reference
+    if rand(1) > 0.99      
+        r = (2*rand(1)-1)*0.50
+    end
     %% Generovani poruchy
 %     if rand(1) > 0.99      %sila
 %         d(1) = randn(1)*5;
@@ -131,15 +138,24 @@ for k = 1:simulationTime/dt
 %         end
 %     end
                
+
     %% Regulace
     %definice vstupu a saturace do <-12,12>
     
 %     e = [Xest(:,k); Ksi(k)]; %vektor v rozsirenem stavovem prostoru
-%     u = K_lqr * e;
-      x = Xest(:,k);
-      u = -K_lqr * x
+      x = X(:,k) - X_operating;
+%       u = -K_lqr * x;
+      u = -K_lqr(2:end)*Xest(2:end,k) - K_lqr(1)*(Xest(1,k)-r);
 %     u = min(12, max(-12, u));
-
+    %% Estimace stavu X
+    Xr = [r 0 0 0]';
+    Xerr = Xr - Xest(:,k);
+    y_est = Co * Xest(:,k);
+    y_msr = Y(:,k);
+    y_err = y_msr - y_est;
+    Dxe = KF.A*Xest(:,k) + KF.B*u + L*y_err;
+    disp("est: " + y_est + "  msr: " + y_msr + "  y_err: " + y_err)
+    Xest(:,k+1) = Xest(:,k) + Dxe*dt; % Euler method
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
@@ -157,13 +173,7 @@ for k = 1:simulationTime/dt
     Dksi(k+1) = r - Y(1,k+1);
     Ksi(k+1) = Ksi(k) + Dksi(k+1);
         
-    %% Estimace stavu X
-    y_est = Co * Xest(:,k);
-    y_msr = Y(:,k);
-    y_err = y_msr - y_est;
-    Dxe = KF.A*Xest(:,k) + KF.B*u + L*y_err;
-    Xest(:,k+1) = Xest(:,k) + Dxe*dt; % Euler method
-    
+
     %% Vizualizace
     
     
@@ -198,7 +208,7 @@ close(hbar);
 
 
 sol.X = X;
-sol.Xest = Xest;
+sol.Xest = Xest + X_operating;
 sol.T = Ts;
 sol.U = U;
 sol.R = R;
