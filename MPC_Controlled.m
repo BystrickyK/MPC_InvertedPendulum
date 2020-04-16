@@ -15,8 +15,8 @@ ny = 2;
 nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
-nlobj.PredictionHorizon = 5;
-nlobj.ControlHorizon = 3;
+nlobj.PredictionHorizon = 10;
+nlobj.ControlHorizon = 5;
 dt = 0.1;
 nlobj.Ts = dt;
 
@@ -26,8 +26,8 @@ nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(2), 0.5)];
 
-nlobj.Weights.OutputVariables = [4 4];
-nlobj.Weights.ManipulatedVariablesRate = 0.001;
+nlobj.Weights.OutputVariables = [8 4];
+nlobj.Weights.ManipulatedVariablesRate = 0.01;
 
 nlobj.OV(1).Min = -0.5;
 nlobj.OV(1).Max = 0.5;
@@ -35,9 +35,9 @@ nlobj.OV(1).Max = 0.5;
 nlobj.MV.Min = -12;
 nlobj.MV.Max = 12;
  
-nlobj.Optimization.UseSuboptimalSolution = true;
+%nlobj.Optimization.UseSuboptimalSolution = true;
 %  nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
- nlobj.Optimization.SolverOptions.MaxIter = 5;
+%nlobj.Optimization.SolverOptions.MaxIter = 5;
 % nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
 % nlobj.Optimization.SolverOptions.UseParallel = true;
 % nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
@@ -79,7 +79,7 @@ U(1) = 0;
 D = zeros(simulationTime/dt, 2); %poruchy
 Y = zeros(simulationTime/dt, 2); %mereni
 Y(1,:) = X(1, 1:2);
-computingTimes = zeros(simulationTime/dt, 1);
+computingTimes = [];
 Xc = X;
 Tc = [];
 %INFO = zeros(simulationTime/dt, 1);
@@ -92,7 +92,7 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0 1];
+yref1 = [0 0.8];
 yref2 = [0 -1];
 yref = yref1;
 
@@ -108,9 +108,45 @@ for k = 1:simulationTime/dt*10
             yref = yref1;
             
     elseif( mod(T, 6.5) == 0)
-            yref = yref2;
+            yref = yref1;
     end
        
+        %% Generovani poruchy
+    if rand(1) > 0.99      %sila
+        d(1) = randn(1)*5;
+        d1T = randn(1)*15;
+        d1t = 0;
+        d1a = 1;
+        %disp("Porucha d1")
+        %disp(d(1))
+        %disp(d1T)
+    end
+    
+    if rand(1) > 0.99      %moment
+        d(2) = randn(1)*5;
+        d2T = randn(1)*15;
+        d2t = 0;
+        d2a = 1;
+        %disp("Porucha d2")
+        %disp(d(2))
+        %disp(d2T)
+    end
+    
+    if d1a==1
+        d1t = d1t + 1;
+        if (d1t >= d1T)
+            d(1) = 0;
+        end
+    end
+    
+    if d2a==1
+        d2t = d2t + 1;
+        if (d2t >= d2T)
+            d(2) = 0;
+            d2a = 0;
+        end
+    end
+    
     %% Estimace stavu X; pouziti mereni pro korekci predpovedi
     Xest(k,:) = correct(EKF, Y(k, :));
     %% Regulace
@@ -118,21 +154,21 @@ for k = 1:simulationTime/dt*10
         
         tic
         [u, nloptions, info] = nlmpcmove(nlobj, Xest(k,:), U(k), yref, []);
-        computingTimes(k) = toc;
+        computingTimes = [computingTimes, toc];
 
               %Vizualizace predikce
-    %           figure(4)
-    %           for i = 1:4
-    %               subplot(3,2,i)
-    %               plot(info.Topt, info.Xopt(:,i), 'ko-')
-    %               grid on
-    %           end
-    %           subplot(313)
-    %           stairs(info.Topt, info.MVopt(:,1), 'ko-');
-    %           grid on
+              figure(4)
+              for i = 1:4
+                  subplot(3,2,i)
+                  plot(info.Topt, info.Xopt(:,i), 'ko-')
+                  grid on
+              end
+              subplot(313)
+              stairs(info.Topt, info.MVopt(:,1), 'ko-');
+              grid on
 
               %Vypocetni cas
-              disp("Computing time: " + computingTimes(k))
+              disp("Computing time: " + computingTimes(end))
               disp(k + "/" + simulationTime/dt);
     end
 
@@ -150,10 +186,10 @@ for k = 1:simulationTime/dt*10
     Tc = [Tc; ts];
     
     %% Mereni a predikce EKF
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0.001 randn(1)*0.01]';  
+    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0 randn(1)*0]';  
     predict(EKF, u);
 
-    waitbar(k*dt/simulationTime,hbar);
+    waitbar(k*dt/simulationTime/10,hbar);
     end
 
 close(hbar);
@@ -176,7 +212,7 @@ sol.computingTimes = computingTimes;
 sol
 
     figure('Name', 'Computing times')
-    bar(Ts(1:end-1), computingTimes);
+    bar(Ts(1:10:end-1), computingTimes);
     grid on
 
 save('results/ResultsMPC12.mat', 'sol');

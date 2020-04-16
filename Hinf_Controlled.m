@@ -4,6 +4,7 @@ clear all
 close all
 addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
 
+p = getParameters();
 % initializeModel();
 
 %% Linearizace v pracovním bod?
@@ -26,11 +27,11 @@ W1 = 1/makeweight(10,1,0.5);
 W2 = 1/makeweight(0.1,[32 0.32],1);
 W3 = 1/makeweight(0.5,1,10);
 
-W1.u = 'e(2)';
+W1.u = 'e(1)+e(2)';
 W1.y = 'z1';
 W2.u = 'u';
 W2.y = 'z2';
-W3.u = 'y(2)';
+W3.u = 'y(1)';
 W3.y = 'z3';
 
 %% Vytvoreni struktury
@@ -53,6 +54,11 @@ legend('S','KS','T','GAM/W1','GAM/W2','GAM/W3','Location','SouthWest')
 grid
 
 K_hinf = K.D;
+
+Areg = (A-B*K_hinf)
+eigs(Areg)
+
+
 %% Navrh estimatoru
 
 
@@ -100,9 +106,6 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0 1];
-yref2 = [0 -1];
-yref = yref1;
 %% Simulace
 hbar = waitbar(0,'Simulation Progress');
 tic
@@ -155,11 +158,11 @@ for k = 1:simulationTime/dt
     %% Estimace stavu X; pouziti mereni pro korekci predpovedi
 
     %% Regulace
-    u = -K_hinf*(Wrel-Xs(k,:))'
+    u = -K_hinf*(Wrel-Xs(k,:))';
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
-    [ts, xs] = ode45(@(t, X) pendCartC_d(Xs(k,:)',u, d'), [(k-1)*dt k*dt], Xs(k,:), options);
+    [ts, xs] = ode45(@(t, X) pendulumCart_symbolicPars(X,u,d,p), [(k-1)*dt/10 k*dt/10], Xs(k,:), options);
 
 	Xs(k+1,:) = xs(end,:);
     Ts(k+1) = ts(end);

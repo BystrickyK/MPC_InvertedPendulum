@@ -1,11 +1,8 @@
-function [] = animRefresh(Xs, Wx, k)
+function [] = animRefresh(X, r)
     
-    figure(2);
-    % animaci lze zrychlit pomocí úpravy kroku, napø. p?i 1:3:rows_ se
-    % vykresluje pouze každý t?etí vzorek
-        alpha = Xs(k, 2);
-        xc = Xs(k, 1);
-
+    figure(2);        
+    xc = X(1);
+    alpha = X(2);
         %poloha kyvadla
         [xp, yp] = pol2cart(alpha-pi/2, 0.45);
         %% vykreslovani
@@ -15,9 +12,9 @@ function [] = animRefresh(Xs, Wx, k)
 
         axis equal
         %xlim([xc*1-0.1-L_p*0.5, xc*1+0.1+L_p*0.5])
-        xlim([-1.1, 1.1]);
-        ylim([-0.6, 0.6]);
-
+%         xlim([-1.1, 1.1]);
+         ylim([-0.6, 0.6]);
+        xlim auto
         quiver( xc, 0,...
             xp, yp,...
             'Color', 'Black',...
@@ -28,10 +25,10 @@ function [] = animRefresh(Xs, Wx, k)
             'MarkerFaceColor',[0.3,0.1,0.5]',...
             'ShowArrowHead', 'off');
         
-        if (length(Wx) == 0)
+        if (length(r) == 0)
             [];
         else
-            plot(Wx(k,1), 0.45, 'bO');
+            plot(r, 0.45, 'bO');
         end
 
         drawnow
