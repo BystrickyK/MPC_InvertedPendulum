@@ -1,6 +1,6 @@
 function [] = animRefresh(X, r)
     
-    figure(2);        
+    figure(2);
     xc = X(1);
     alpha = X(2);
         %poloha kyvadla
@@ -11,10 +11,8 @@ function [] = animRefresh(X, r)
         grid on
 
         axis equal
-        %xlim([xc*1-0.1-L_p*0.5, xc*1+0.1+L_p*0.5])
-%         xlim([-1.1, 1.1]);
-         ylim([-0.6, 0.6]);
-        xlim auto
+        xlim([-1.1, 1.1]);
+        ylim([-0.6, 0.6]);
         quiver( xc, 0,...
             xp, yp,...
             'Color', 'Black',...

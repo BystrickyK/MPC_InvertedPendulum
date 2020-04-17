@@ -11,7 +11,7 @@ data = data.sol;
 samples = length(data.X);
 
 X = data.X;
-%Xest = data.Xest;
+Xest = data.Xest;
 Ts = data.T;
 U = data.U;
 D = data.D;
@@ -28,21 +28,25 @@ if (isfield(data, 'computingTimes'))
 end
 
 
-kRefreshPlot = 25; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 1; % ~ ^
+kRefreshPlot = 3; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
+kRefreshAnim = 5; % ~ ^
+
+global figureAnimation
+figureAnimation = figure('Name','Animation');
+axesAnimation = axes('Parent', figureAnimation);
 
 for k = 2:1:samples-1
     %% Vizualizace
     if(mod(k,kRefreshPlot)==0)
 %        plotRefresh(Ts,Xs,Xest,[],U,D,Y,k,kRefreshPlot); % MPC
-%        plotRefresh(Ts,Xs,Xest+X_operating,Wx,U,D,Y,k,kRefreshPlot); %LQG
+       plotRefresh(Ts,X,Xest+X_operating,R,U,D,Y,k,kRefreshPlot); %LQG
 %        plotRefresh(Ts,Xs,[],[],U,D,Y,k,kRefreshPlot); % Hinf
     end
     
     if(mod(k,kRefreshAnim)==0)
-%         animRefresh(Xs,[],k); %MPC
-%         animRefresh(Xs,Wx,k); %LQG
-    animRefresh(X(:,k), R(k)); % Hinf
+%       animRefresh(Xs,[],k); %MPC
+        animRefresh(X(:,k),R(k)); %LQG
+%       animRefresh(X(:,k), R(k)); % Hinf
         title(k)
     end
         
