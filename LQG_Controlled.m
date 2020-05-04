@@ -1,5 +1,5 @@
 %%  Zadané hodnoty
-clc
+% clc
 clear all 
 close all
 addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
@@ -8,10 +8,10 @@ addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
 
 p = getParameters();
 initializeModel();
-%%  Navrh regulatoru
-    X_operating = [0 pi 0 0]';
+%%  Model
+    X_operating = [0 0 pi 0]';
     [A, B] = AB(X_operating, 0);
-    Co = [1 0 0 0; 0 1 0 0]; % observed outputs | measuring xc and alpha
+    Co = [1 0 0 0; 0 0 1 0]; % observed outputs | measuring xc and alpha
     Cr = [1 0 0 0]; % reference outputs
     D = [0; 0];
     
@@ -20,52 +20,51 @@ initializeModel();
     % with the variable x_c, where x_c is the position of the cart
     % The controlled plant already has an integrator, the controller's
     % integrator purpose is to reject constant disturbances, not to
-    % remove steady-state error
+    % remove steady-state error. 
     Ah = [A, zeros(length(A),1);
          -Cr, 0];
     Bh = [B; 0];
- 
-    Q = diag([5 10 0.1 0.1 5]);
+    Cho = [1 0 0 0 0; 0 0 1 0 0];
+    Dh = [0;0];
+    
+    Gr = ss(Ah,Bh,Cho,Dh);
+    Ge = ss(A,B,Co,D);
+%%  Navrh regulatoru
+    ctrb_ = ctrb(Ah,Bh);
+    ctrbr = rank(ctrb_);
+
+    Q = diag([1 0.1 1 1 10]);
     R = 0.1;
-    K_lqr = lqr(Ah,Bh,Q,R);
-    disp(eigs(Ah-Bh*K_lqr));
-%     Q = diag([25 50 0.1 0.1]);
-%     R = 0.1;
-%     K_lqr = lqr(A,B,Q,R);
-%     disp(eigs(A-B*K_lqr));
-    
-%     K_lqr = place(A,B,[-1+0.01j, -1-0.01j, -0.5+0.01j, -0.5-0.01j])
-%         disp(eigs(A-B*K_lqr));
-    
+    [K,S,e] = lqr(Ah,Bh,Q,R);
+
 %% Navrh estimatoru
     obsv_ = obsv(A,Co);
     obsvr = rank(obsv_);
 
     % process noise covariance matrix
-    Vd = diag([0.1 0.1 1 1]);
+    Vd = diag([5 10 5 10]);
+    % noise covariance matrix
+    Vn = [0.02 0; 0 0.05];
     
-    %noise covariance matrix
-    Vn = [0.1 0; 0 0.1];
-    
-
-    L = lqe(A,Vd,Co,Vd,Vn);
+%     [kest,L,P] = kalman(Ge,Vd,Vn);
+     L = lqe(A,Vd,Co,Vd,Vn);
 %   L = (lqr(A', Co', Vd, Vn))';
 
     Cf = eye(4);
     KF = ss((A-L*Co), [B L], eye(4), 0);
-    disp(eigs(KF.A));
- 
+
+%% Gain margins
+    
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X0 = [-0.2,pi*29/30,0,0]'; %x, alpha, dx, dalpha
-%pozadovany stav
-r = 0;
-% Wrel = W - X_operating;
+X0 = [0,0,pi,0]'; %x, alpha, dx, dalpha
+%pozadovany stav x_cr
+r = 0.5;
 
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 1.5e1;
+simulationTime = 1.5e2;
 dt = 0.01; %samplovaci perioda
 kRefreshPlot = 10; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 2; % ^
@@ -88,13 +87,10 @@ Y = zeros(2,simulationTime/dt); %mereni
 Y(:,1) = X0(1:2) - X_operating(1:2);
 
 %pocatecni porucha
-d = [0.1 0]'; %vektor poruch
+d = [1 0.1]'; %vektor poruch
 d1T = 0; %celkove trvani poruchy 1
 d1t = 0; %jak dlouho je porucha 1 momentalne aktivni
 d1a = 0; %amplituda poruchy 1
-d2T = 0;
-d2t = 0;
-d2a = 0;
 
 %% Simulace
 hbar = waitbar(0,'Simulation Progress');
@@ -103,53 +99,26 @@ disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt
     % Soucasny stav  
     % Generovani pozadovane reference
-    if rand(1) > 0.99999      
+    if rand(1) > 0.999      
         r = (2*rand(1)-1)*0.50
-    end
-    %% Generovani poruchy
-%     if rand(1) > 0.99      %sila
-%         d(1) = randn(1)*5;
-%         d1T = randn(1)*5;
-%         d1t = 0;
-%         d1a = 1;
-%         %disp("Porucha d1")
-%         %disp(d(1))
-%         %disp(d1T)
-%     end
-%     
-%     if rand(1) > 0.99      %moment
-%         d(2) = randn(1)*5;
-%         d2T = randn(1)*5;
-%         d2t = 0;
-%         d2a = 1;
-%         %disp("Porucha d2")
-%         %disp(d(2))
-%         %disp(d2T)
-%     end
-%     
-%     if d1a==1
-%         d1t = d1t + 1;
-%         if (d1t >= d1T)
-%             d(1) = 0;
-%         end
-%     end
-%     
-%     if d2a==1
-%         d2t = d2t + 1;
-%         if (d2t >= d2T)
-%             d(2) = 0;
-%             d2a = 0;
-%         end
-%     end
-               
+    end               
 
     %% Regulace
-    %definice vstupu a saturace do <-12,12>
+    %definice vstupu a saturace do <-6,6>
     
-      e = [Xest(:,k); 0.02*Ksi(k)]; %vektor v rozsirenem stavovem prostoru
-%       e(1) = e(1) - r;
-      u = - K_lqr*e ;
-%     u = min(12, max(-12, u));
+      e = [ Xest(:,k) ; Ksi(k) ]; %vektor v rozsirenem stavovem prostoru
+%       e(1) = -r + e(1); % signs are reversed because they get flipped by -K_lqr
+      u = -K * e;
+      u = min(12, max(-12, u));
+     
+      if mod(k,500)==0
+          for i = 1:length(e)
+              str = sprintf("k%d * e%d = %f", i,i,-K(i)*e(i));
+              disp(str);
+          end
+        str = sprintf("u = %f \n",u);
+        disp(str);
+      end
     %% Estimace stavu X
 
     y_est = Co * X(:,k);
@@ -170,10 +139,11 @@ for k = 1:simulationTime/dt
     D(:,k+1) = d;
     
     % mereni Y
-    Y(:,k+1) = Co * xs(end,:)' + [ 0.02*sqrt(Vn(1,1))*randn(1), 0.01*sqrt(Vn(2,2))*randn(1) ]' - X_operating(1:2);
+    Y(:,k+1) = Co * xs(end,:)' + [ 0.02*sqrt(Vn(1,1))*randn(1), 0.003*sqrt(Vn(2,2))*randn(1) ]' ...
+               - [X_operating(1), X_operating(3)]';
 
     Dksi(k+1) = r - Y(1,k+1);
-    Ksi(k+1) = Ksi(k) + Dksi(k+1);
+    Ksi(k+1) = Ksi(k) + dt*Dksi(k);
         
 
     %% Vizualizace
@@ -193,7 +163,7 @@ for k = 1:simulationTime/dt
     waitbar(k*dt/simulationTime,hbar);
     
     %%
-    if abs(X(1, k)) > 10 || abs(X(2,k)-pi) > pi
+    if abs(X(1, k)) > 10 || abs(X(3,k)-pi) > pi
         break;
     end
     
@@ -213,4 +183,4 @@ sol.dt = dt;
 
 sol
 
-save('ResultsLQG1.mat', 'sol');
+save('results/ResultsLQG4.mat', 'sol');

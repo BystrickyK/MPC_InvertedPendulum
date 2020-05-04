@@ -8,7 +8,7 @@ addpath('functions') % toto pøidá slo¾ku functions do prohlédávaných
 p = getParameters();
 
 initializeModel();
-C = [1 0 0 0; 0 1 0 0];
+C = [1 0 0 0; 0 0 1 0];
 %%  Navrh regulatoru    
 nx = 4;
 ny = 2;
@@ -24,27 +24,21 @@ nlobj.Model.StateFcn = 'pendCartC';
 nlobj.Jacobian.StateFcn = 'AB';
 nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
-nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(2), 0.5)];
+nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(3), 0.5)];
 
-nlobj.Weights.OutputVariables = [8 4];
-nlobj.Weights.ManipulatedVariablesRate = 0.01;
+nlobj.Weights.OutputVariables = [4 2];
+nlobj.Weights.ManipulatedVariablesRate = 0.1;
 
-nlobj.OV(1).Min = -0.5;
-nlobj.OV(1).Max = 0.5;
+% nlobj.OV(1).Min = -0.5;
+% nlobj.OV(1).Max = 0.5;
 
-nlobj.MV.Min = -12;
-nlobj.MV.Max = 12;
+nlobj.MV.Min = -10;
+nlobj.MV.Max = 10;
  
-%nlobj.Optimization.UseSuboptimalSolution = true;
-%  nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
-%nlobj.Optimization.SolverOptions.MaxIter = 5;
-% nlobj.Optimization.SolverOptions.OptimalityTolerance = 1e-6;
-% nlobj.Optimization.SolverOptions.UseParallel = true;
-% nlobj.Optimization.SolverOptions.ConstraintTolerance = 1e-6;
-% nlobj.Optimization.SolverOptions.FiniteDifferenceStepSize = 10*sqrt(eps);
-
-% nloptions = nlmpcmoveopt;
-% nloptions.Parameters = {dt};
+nlobj.Optimization.UseSuboptimalSolution = true;
+nlobj.Optimization.SolverOptions.MaxIter = 5;
+nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
+nlobj.Optimization.SolverOptions.Display = 'none';
 
 X = [0; 0; 0; 0];
 validateFcns(nlobj, X, 0, [])
@@ -52,39 +46,39 @@ validateFcns(nlobj, X, 0, [])
 %% Navrh EKF
 
 EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u,dt/10), ...
-                           @(X) [X(1); X(2)]);
+                           @(X) [X(1); X(3)]);
 EKF.MeasurementNoise = diag([0.01 0.01]);
 EKF.ProcessNoise = 1*eye(4);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X = [0 0 0 0]; %alpha, dAlpha, xc, dXc
+X0 = [0 0 0 0]'; %xc dxc alpha dalpha
 EKF.State = X;
 u = 0;
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 42;
+simulationTime = 80;
 dt = dt; %samplovaci perioda
 kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
 kRefreshAnim = 5; % ^
 
-%predalokace poli pro data
-Xs = zeros(simulationTime/dt, 4); %skutecny stav
-Xs(1,:) = X;
-Xest(1,:) = X;
-Ts = zeros(simulationTime/dt, 1);   %cas
-U = zeros(simulationTime/dt, 1);   %vstupy
-U(1) = 0;
-D = zeros(simulationTime/dt, 2); %poruchy
-Y = zeros(simulationTime/dt, 2); %mereni
-Y(1,:) = X(1, 1:2);
-computingTimes = [];
-Xc = X;
-Tc = [];
-%INFO = zeros(simulationTime/dt, 1);
 
-d = [0 0];
+%predalokace poli pro data
+X = zeros(4, simulationTime/dt); %skutecny stav
+X(:,1) = X0;
+Xest = zeros(4,simulationTime/dt); %estimovany stav
+Xest(:,1) = X0;
+Ts = zeros(1,simulationTime/dt);   %spojity cas
+U = zeros(1,simulationTime/dt);   %vstupy
+U(1) = 0;
+D = zeros(2,simulationTime/dt); %poruchy
+Y = zeros(2,simulationTime/dt); %mereni
+Y(:,1) = [X0(1), X0(3)];
+computingTimes = [];
+computingTimes2 = [];
+
+d = [0 0]';
 d1T = 0;
 d1t = 0;
 d1a = 0;
@@ -92,70 +86,71 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0 0.8];
+yref1 = [0 1];
+[~, nloptions_ref1] = nlmpcmove(nlobj, [0 0 0 0], U(1), yref1,[]);
 yref2 = [0 -1];
+[~, nloptions_ref2] = nlmpcmove(nlobj, [0 0 pi 0], U(1), yref1,[]);
 yref = yref1;
 
+nloptions = nloptions_ref1; %initial guess
 %% Simulace
 hbar = waitbar(0,'Simulation Progress');
 tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt*10
+    tic
     %% Generovani pozadovaneho stavu
     T = mod(k*dt/10, 10);
     
     if( mod(T, 0) == 0)
             yref = yref1;
-            
+            nloptions = nloptions_ref2;            
     elseif( mod(T, 6.5) == 0)
-            yref = yref1;
+            yref = yref2;
+            nloptions = nloptions_ref1;   
     end
        
-        %% Generovani poruchy
-    if rand(1) > 0.99      %sila
-        d(1) = randn(1)*5;
-        d1T = randn(1)*15;
-        d1t = 0;
-        d1a = 1;
-        %disp("Porucha d1")
-        %disp(d(1))
-        %disp(d1T)
-    end
-    
-    if rand(1) > 0.99      %moment
-        d(2) = randn(1)*5;
-        d2T = randn(1)*15;
-        d2t = 0;
-        d2a = 1;
-        %disp("Porucha d2")
-        %disp(d(2))
-        %disp(d2T)
-    end
-    
-    if d1a==1
-        d1t = d1t + 1;
-        if (d1t >= d1T)
-            d(1) = 0;
-        end
-    end
-    
-    if d2a==1
-        d2t = d2t + 1;
-        if (d2t >= d2T)
-            d(2) = 0;
-            d2a = 0;
-        end
-    end
+%         %% Generovani poruchy
+%     if rand(1) > 0.99      %sila
+%         d(1) = randn(1)*5;
+%         d1T = randn(1)*15;
+%         d1t = 0;
+%         d1a = 1;
+%         %disp("Porucha d1")
+%         %disp(d(1))
+%         %disp(d1T)
+%     end
+%     
+%     if rand(1) > 0.99      %moment
+%         d(2) = randn(1)*5;
+%         d2T = randn(1)*15;
+%         d2t = 0;
+%         d2a = 1;
+%         %disp("Porucha d2")
+%         %disp(d(2))
+%         %disp(d2T)
+%     end
+%     
+%     if d1a==1
+%         d1t = d1t + 1;
+%         if (d1t >= d1T)
+%             d(1) = 0;
+%         end
+%     end
+%     
+%     if d2a==1
+%         d2t = d2t + 1;
+%         if (d2t >= d2T)
+%             d(2) = 0;
+%             d2a = 0;
+%         end
+%     end
     
     %% Estimace stavu X; pouziti mereni pro korekci predpovedi
-    Xest(k,:) = correct(EKF, Y(k, :));
+    Xest(:,k) = correct(EKF, Y(:,k));
     %% Regulace
     if(mod(k,10)==0)
-        
-        tic
-        [u, nloptions, info] = nlmpcmove(nlobj, Xest(k,:), U(k), yref, []);
-        computingTimes = [computingTimes, toc];
-
+        [u, nloptions, info] = nlmpcmove(nlobj,Xest(:,k),U(k),yref,[],nloptions);
               %Vizualizace predikce
               figure(4)
               for i = 1:4
@@ -175,33 +170,28 @@ for k = 1:simulationTime/dt*10
     %% Simulace
     
     %"spojite" reseni v intervalu dt, uklada se pouze konecny stav 
-    [ts, xs] = ode45(@(t, X) pendulumCart_symbolicPars(X,u,d,p), [(k-1)*dt/10 k*dt/10], Xs(k,:), options);
-
-	Xs(k+1,:) = xs(end,:);
+    [ts, xs] = ode45(@(t, X) pendCartC_d(X,u,d), [(k-1)*dt/10 k*dt/10], X(:,k), options);
+            computingTimes = [computingTimes, toc];
+    X(:,k+1) = xs(end,:)';
     Ts(k+1) = ts(end);
     U(k+1) = u;
-    %Wx(k+1) = W(1);
-    D(k+1, :) = d;
-    Xc = [Xc; xs];
-    Tc = [Tc; ts];
-    
+    D(:,k+1) = d;
     %% Mereni a predikce EKF
-    Y(k+1, :) = C * xs(end,:)' + [randn(1)*0 randn(1)*0]';  
+    Y(:,k+1) = C * xs(end,:)' + [randn(1)*0.01 randn(1)*0.01]';  
     predict(EKF, u);
 
     waitbar(k*dt/simulationTime/10,hbar);
+    
     end
 
 close(hbar);
 
-sol.X = Xs;
+sol.X = X;
 sol.Xest = Xest;
 sol.T = Ts;
 sol.U = U;
 sol.D = D;
 sol.Y = Y;
-sol.Xc = Xc;
-sol.Tc = Tc;
 sol.dt = dt;
 %sol.INFO = INFO;
 % sol.bonked_k = bonked_k;

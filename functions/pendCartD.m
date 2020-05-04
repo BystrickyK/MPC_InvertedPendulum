@@ -1,5 +1,5 @@
 function Yk1 = pendCartD(Yk0,uk,Ts)
-    M = 100;
+    M = 2;
     delta = Ts/M;
     Yk1 = Yk0;
     for ct=1:M
