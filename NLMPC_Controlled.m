@@ -15,6 +15,7 @@ ny = 2;
 nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
+
 nlobj.PredictionHorizon = 10;
 nlobj.ControlHorizon = 5;
 dt = 0.1;
@@ -27,16 +28,17 @@ nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(3), 0.5)];
 
 nlobj.Weights.OutputVariables = [4 2];
-nlobj.Weights.ManipulatedVariablesRate = 0.05;
+nlobj.Weights.ManipulatedVariablesRate = 0.1;
 
 % nlobj.OV(1).Min = -0.5;
 % nlobj.OV(1).Max = 0.5;
-% 
+ 
 nlobj.MV.Min = -10;
 nlobj.MV.Max = 10;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
 nlobj.Optimization.SolverOptions.MaxIter = 5;
+nlobj.Optimization.SolverOptions.UseParallel = true;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
 
@@ -47,7 +49,7 @@ validateFcns(nlobj, X, 0, [])
 
 EKF = extendedKalmanFilter(@(X, u)pendCartD(X,u,dt/10), ...
                            @(X) [X(1); X(3)]);
-EKF.MeasurementNoise = diag([0.5 0.5]);
+EKF.MeasurementNoise = diag([1 1]);
 EKF.ProcessNoise = diag([1 5 1 5]);
 
 %% Nastaveni pocatecnich hodnot
@@ -60,9 +62,6 @@ options = odeset();
 
 simulationTime = 50;
 dt = dt; %samplovaci perioda
-kRefreshPlot = 100; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 5; % ^
-
 
 %predalokace poli pro data
 X = zeros(4, simulationTime/dt); %skutecny stav
@@ -71,12 +70,13 @@ Xest = zeros(4,simulationTime/dt); %estimovany stav
 Xest(:,1) = X0;
 Ts = zeros(1,simulationTime/dt);   %spojity cas
 U = zeros(1,simulationTime/dt);   %vstupy
-U(1) = 0;
+U(1) = u;
 D = zeros(2,simulationTime/dt); %poruchy
 Y = zeros(2,simulationTime/dt); %mereni
 Y(:,1) = [X0(1), X0(3)];
 computingTimes = [];
 computingTimes2 = [];
+INFO = [];
 
 d = [0 0]';
 d1T = 0;
@@ -94,6 +94,7 @@ yref3 = [-0.25 1];
 % [~, nloptions_ref1] = nlmpcmove(nlobj, [0 0 0 0], 0, yref3,[]);
 yref4 = [0.25 -1];
 % [~, nloptions_ref2] = nlmpcmove(nlobj, [0 0 pi 0], 0, yref4,[]);
+
 yref = yref1;
 
 nloptions = nloptions_ref1; %initial guess
@@ -107,6 +108,7 @@ for k = 1:simulationTime/dt*10
     
     if( T == 0)
             yref = yref1;
+            nloptions = nloptions_ref1;
    
     elseif( T == 6.5)
             yref = yref2;
@@ -120,63 +122,49 @@ for k = 1:simulationTime/dt*10
     end
        
         %% Generovani poruchy
-    if rand(1) > 0.99      %sila
-        d(1) = randn(1)*3;
-        d1T = randn(1)*30;
-        d1t = 0;
-        d1a = 1;
-        %disp("Porucha d1")
-        %disp(d(1))
-        %disp(d1T)
-    end
-    
-%     if rand(1) > 0.99      %moment
-%         d(2) = randn(1)*5;
-%         d2T = randn(1)*15;
-%         d2t = 0;
-%         d2a = 1;
-%         %disp("Porucha d2")
-%         %disp(d(2))
-%         %disp(d2T)
+%     if rand(1) > 0.99      %sila
+%         d(1) = randn(1)*3;
+%         d1T = randn(1)*30;
+%         d1t = 0;
+%         d1a = 1;
+%         %disp("Porucha d1")
+%         %disp(d(1))
+%         %disp(d1T)
 %     end
-    
-    if d1a==1
-        d1t = d1t + 1;
-        if (d1t >= d1T)
-            d(1) = 0;
-        end
-    end
-    
-%     if d2a==1
-%         d2t = d2t + 1;
-%         if (d2t >= d2T)
-%             d(2) = 0;
-%             d2a = 0;
+%     
+%     if d1a==1
+%         d1t = d1t + 1;
+%         if (d1t >= d1T)
+%             d(1) = 0;
 %         end
 %     end
-    
     %% Estimace stavu X; pouziti mereni pro korekci predpovedi
     Xest(:,k) = correct(EKF, Y(:,k));
     %% Regulace
     if(mod(k,10)==0)
         tic
         [u, nloptions, info] = nlmpcmove(nlobj,Xest(:,k),U(k),yref,[],nloptions);
-        computingTimes = [computingTimes, toc];
+        computingTime = toc;
+        computingTimes = [computingTimes, computingTime];
+        INFO = [INFO info];
               %Vizualizace predikce
-%               figure(4)
-%               for i = 1:4
-%                   subplot(3,2,i)
-%                   plot(info.Topt, info.Xopt(:,i), 'ko-')
-%                   grid on
-%               end
-%               subplot(313)
-%               stairs(info.Topt, info.MVopt(:,1), 'ko-');
-%               grid on
-% 
+              figure(4)
+              for i = 1:4
+                  subplot(3,2,i)
+                  plot(info.Topt, info.Xopt(:,i), 'ko-')
+                  grid on
+              end
+              subplot(313)
+              stairs(info.Topt, info.MVopt(:,1), 'ko-');
+              grid on
+
               %Vypocetni cas
               disp("Computing time: " + computingTimes(end))
               disp(k + "/" + simulationTime/dt*10);
     end
+    
+    u = min(8, max(-8, u));
+     
 
     %% Simulace
     
@@ -202,8 +190,7 @@ sol.U = U;
 sol.D = D;
 sol.Y = Y;
 sol.dt = dt;
-%sol.INFO = INFO;
-% sol.bonked_k = bonked_k;
+sol.INFO = INFO;
 sol.controller = nlobj;
 sol.computingTimes = computingTimes;
 
@@ -214,4 +201,4 @@ sol
     bar(Ts(1:10:end-1), computingTimes);
     grid on
 
-save('results/ResultsMPC14.mat', 'sol');
+save('results/ResultsMPC15.mat', 'sol');

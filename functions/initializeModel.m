@@ -6,11 +6,13 @@ function [] = initializeModel()
     
     % Definice parametr? soustavy
     p = getParameters();
-
+    
+    p_real = p;
+    p_real ...
     % Dosazení známých parametr? do stavových rovnic nelineárního modelu
     % Neznámé "?ídící" prom?nné jako stavový vektor |X|, poruchy |d|, a ak?ní
     % veli?ina |u| se dosadí jako symbolické.
-    syms X [4 1] %   Y [1 4] = stavový vektor, sloupcový 4x1 
+    syms X [4 1] %   X [1 4] = stavový vektor, sloupcový 4x1 
     syms d [2 1]
     syms u
     % Vytvo?íme symbolické rovnice s dosazenými parametry

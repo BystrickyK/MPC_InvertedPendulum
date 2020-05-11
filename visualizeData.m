@@ -5,7 +5,7 @@ addpath('gif')
 addpath('results')
 
 
-data = load('ResultsMPC14.mat');
+data = load('ResultsMPC15.mat');
 data = data.sol;
 
 samples = length(data.X);
@@ -29,7 +29,7 @@ end
 
 
 kRefreshPlot = 50; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 4; % ~ ^
+kRefreshAnim = 8; % ~ ^
 
 for k = 2:1:samples-1
     %% Vizualizace
