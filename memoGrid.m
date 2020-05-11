@@ -35,7 +35,7 @@ nlobj.MV.Min = -10;
 nlobj.MV.Max = 10;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.MaxIter = 5;
+nlobj.Optimization.SolverOptions.MaxIter = 12;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
 
@@ -45,6 +45,8 @@ validateFcns(nlobj, X, 0, [])
 [~, nloptions] = nlmpcmove(nlobj, [0 0 0 0], 0, [0 -1],[]);
 u_prev = 0;
 %% memo
+
+%Diskretizace
 x1p = 10;
 x2p = 20;
 x3p = 25;
@@ -64,6 +66,7 @@ counter = 0;
 elapsedTime_ = [];
 tic
 
+
 for i = 1:length(x1)
     for j = 1:length(x2)
         for k = 1:length(x3)
@@ -81,14 +84,14 @@ for i = 1:length(x1)
                     
                     if(mod(counter,100)==0)
                         elapsedTime = toc;
-                        elapsedTime_ = [elapsedTime_ elapsedTime];
+                        elapsedTime_ = [elapsedTime elapsedTime_];
                         averageTime = mean(elapsedTime_);
                         totalTimeEstimate = pointCount/100*averageTime;
                         timeLeft = (pointCount-counter)/100*averageTime;
                         fprintf("Progress: %d / %d \t Time per 100: %f s \t Total time estimate: %f min \t Time left: %f min\n",...
                             counter,pointCount,elapsedTime, totalTimeEstimate/60, timeLeft/60);
-%                         fprintf("x1: %f x2: %f x3: %f x4: %f yref1: %f \t u: %f",...
-%                             x1(i),x2(j),x3(k),x4(l),yref1(m),u);
+                        fprintf("x1: %f x2: %f x3: %f x4: %f yref1: %f \t u: %f\n",...
+                            x1(i),x2(j),x3(k),x4(l),yref1(m),u);
                         tic;
                     end  
                     
@@ -99,6 +102,5 @@ for i = 1:length(x1)
 end
 
 sol.Grid = memoGrid_;
-sol.TotalTime = totalTimeEstimate;
 
 save('memoGrids/memoGrid1.mat', 'sol');
