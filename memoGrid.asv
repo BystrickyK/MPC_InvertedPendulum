@@ -14,7 +14,7 @@ nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
 
-nlobj.PredictionHorizon = 10;
+nlobj.PredictionHorizon = 8;
 nlobj.ControlHorizon = 5;
 dt = 0.1;
 nlobj.Ts = dt;
@@ -35,20 +35,22 @@ nlobj.MV.Min = -10;
 nlobj.MV.Max = 10;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.MaxIter = 5;
+nlobj.Optimization.SolverOptions.MaxIter = 30;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
 
 X = [0; 0; 0; 0];
 validateFcns(nlobj, X, 0, [])
 
-[~, nloptions] = nlmpcmove(nlobj, [0 0 0 0], 0, [0 -1],[]);
+[~, nloptions] = nlmpcmove(nlobj, [0 0 0 0], 0, [0 1],[]);
 u_prev = 0;
 %% memo
-x1p = 10;
-x2p = 20;
-x3p = 25;
-x4p = 12;
+
+%Diskretizace
+x1p = 5;
+x2p = 10;
+x3p = 16;
+x4p = 10;
 yref1p = 2;
 
 x1 = linspace(-1, 1, x1p);
@@ -59,14 +61,14 @@ yref1 = [-1, 1];
 
 memoGrid_ = ndgrid(x1,x2,x3,x4,yref1);
 pointCount = numel(memoGrid_);
+pointGrid = [];
 
-global counter elapsedTime_
 counter = 0;
 elapsedTime_ = [];
 tic
 
-parpool(4)
-parfor i = 1:length(x1)
+
+for i = 1:length(x1)
     for j = 1:length(x2)
         for k = 1:length(x3)
             for l = 1:length(x4)
@@ -74,25 +76,29 @@ parfor i = 1:length(x1)
                     counter = counter + 1;
                     
                     x = [x1(i) x2(j) x3(k) x4(l)]; % state space point
-                    yref = memoGrid_(1,1,1,1,m); % reference point
+                    yref = yref1(m); % reference point
                     
-                    [u, nloptions, ~] = nlmpcmove(nlobj,x,u_prev,[0 yref],[],nloptions);
-                    memoGrid_(i,j,k,l,m) = u;
-                    u_prev = u;
+                    %transformation from 5D to 2D
+                    %each row consists of |dim| columns
+                    pointGrid = [pointGrid; x yref]; 
+                    
+%                     [u, nloptions, ~] = nlmpcmove(nlobj,x,u_prev,[0 yref],[],nloptions);
+%                     memoGrid_(i,j,k,l,m) = u;
+%                     u_prev = u;
 
                     
-                    if(mod(counter,100)==0)
-                        elapsedTime = toc;
-                        elapsedTime_ = [elapsedTime elapsedTime_];
-                        averageTime = mean(elapsedTime_);
-                        totalTimeEstimate = pointCount/100*averageTime;
-                        timeLeft = (pointCount-counter)/100*averageTime;
-                        fprintf("Progress: %d / %d \t Time per 100: %f s \t Total time estimate: %f min \t Time left: %f min\n",...
-                            counter,pointCount,elapsedTime, totalTimeEstimate/60, timeLeft/60);
-%                         fprintf("x1: %f x2: %f x3: %f x4: %f yref1: %f \t u: %f",...
+%                     if(mod(counter,100)==0)
+%                         elapsedTime = toc;
+%                         elapsedTime_ = [elapsedTime elapsedTime_];
+%                         averageTime = mean(elapsedTime_);
+%                         totalTimeEstimate = pointCount/100*averageTime;
+%                         timeLeft = (pointCount-counter)/100*averageTime;
+%                         fprintf("Progress: %d / %d \t Time per 100: %f s \t Total time estimate: %f min \t Time left: %f min\n",...
+%                             counter,pointCount,elapsedTime, totalTimeEstimate/60, timeLeft/60);
+%                         fprintf("x1: %f x2: %f x3: %f x4: %f yref1: %f \t u: %f\n",...
 %                             x1(i),x2(j),x3(k),x4(l),yref1(m),u);
-                        tic;
-                    end  
+%                         tic;
+%                     end  
                     
                 end
             end
@@ -102,4 +108,4 @@ end
 
 sol.Grid = memoGrid_;
 
-save('memoGrids/memoGrid1.mat', 'sol');
+save('memoGrids/memoGrid2.mat', 'sol');

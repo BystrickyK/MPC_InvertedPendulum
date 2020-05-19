@@ -16,8 +16,8 @@ nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
 
-nlobj.PredictionHorizon = 10;
-nlobj.ControlHorizon = 5;
+nlobj.PredictionHorizon = 7;
+nlobj.ControlHorizon = 4;
 dt = 0.1;
 nlobj.Ts = dt;
 
@@ -27,7 +27,7 @@ nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(3), 0.5)];
 
-nlobj.Weights.OutputVariables = [4 2];
+nlobj.Weights.OutputVariables = [10 2];
 nlobj.Weights.ManipulatedVariablesRate = 0.1;
 
 % nlobj.OV(1).Min = -0.5;
@@ -38,7 +38,7 @@ nlobj.MV.Max = 10;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
 nlobj.Optimization.SolverOptions.MaxIter = 5;
-nlobj.Optimization.SolverOptions.UseParallel = true;
+% nlobj.Optimization.SolverOptions.UseParallel = true;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
 
@@ -60,7 +60,7 @@ u = 0;
 %nastaveni solveru
 options = odeset();
 
-simulationTime = 50;
+simulationTime = 20;
 dt = dt; %samplovaci perioda
 
 %predalokace poli pro data
@@ -86,14 +86,10 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0.25 1];
+yref1 = [0.0 1];
 [~, nloptions_ref1] = nlmpcmove(nlobj, [0 0 0 0], 0, yref1,[]);
-yref2 = [-0.25 -1];
-% [~, nloptions_ref2] = nlmpcmove(nlobj, [0 0 pi 0], 0, yref2,[]);
-yref3 = [-0.25 1];
-% [~, nloptions_ref1] = nlmpcmove(nlobj, [0 0 0 0], 0, yref3,[]);
-yref4 = [0.25 -1];
-% [~, nloptions_ref2] = nlmpcmove(nlobj, [0 0 pi 0], 0, yref4,[]);
+yref2 = [0 -1];
+
 
 yref = yref1;
 
@@ -104,24 +100,15 @@ tic
 disp("1000 samples = " + 1000*dt + "s");
 for k = 1:simulationTime/dt*10
     %% Generovani pozadovaneho stavu
-    T = mod(k*dt/10, 20);
+    T = mod(k*dt/10, 10);
     
     if( T == 0)
             yref = yref1;
-            nloptions = nloptions_ref1;
-   
     elseif( T == 6.5)
             yref = yref2;
-
-    elseif( T == 10)
-            yref = yref3;
-  
-    elseif(T == 16.5)
-            yref = yref4;
-
     end
        
-        %% Generovani poruchy
+%         %% Generovani poruchy
 %     if rand(1) > 0.99      %sila
 %         d(1) = randn(1)*3;
 %         d1T = randn(1)*30;
@@ -144,26 +131,26 @@ for k = 1:simulationTime/dt*10
     if(mod(k,10)==0)
         tic
         [u, nloptions, info] = nlmpcmove(nlobj,Xest(:,k),U(k),yref,[],nloptions);
-        computingTime = toc;
+        computingTime = toc
         computingTimes = [computingTimes, computingTime];
         INFO = [INFO info];
-              %Vizualizace predikce
-              figure(4)
-              for i = 1:4
-                  subplot(3,2,i)
-                  plot(info.Topt, info.Xopt(:,i), 'ko-')
-                  grid on
-              end
-              subplot(313)
-              stairs(info.Topt, info.MVopt(:,1), 'ko-');
-              grid on
-
-              %Vypocetni cas
-              disp("Computing time: " + computingTimes(end))
-              disp(k + "/" + simulationTime/dt*10);
+%               %Vizualizace predikce
+%               figure(4)
+%               for i = 1:4
+%                   subplot(3,2,i)
+%                   plot(info.Topt, info.Xopt(:,i), 'ko-')
+%                   grid on
+%               end
+%               subplot(313)
+%               stairs(info.Topt, info.MVopt(:,1), 'ko-');
+%               grid on
+% 
+%               %Vypocetni cas
+%               disp("Computing time: " + computingTimes(end))
+%               disp(k + "/" + simulationTime/dt*10);
     end
     
-    u = min(8, max(-8, u));
+    u = min(10, max(-10, u));
      
 
     %% Simulace
@@ -201,4 +188,4 @@ sol
     bar(Ts(1:10:end-1), computingTimes);
     grid on
 
-save('results/ResultsMPC15.mat', 'sol');
+save('results/ResultsNLMPC.mat', 'sol');

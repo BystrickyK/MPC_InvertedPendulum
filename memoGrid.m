@@ -14,7 +14,7 @@ nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
 
-nlobj.PredictionHorizon = 10;
+nlobj.PredictionHorizon = 8;
 nlobj.ControlHorizon = 5;
 dt = 0.1;
 nlobj.Ts = dt;
@@ -35,22 +35,22 @@ nlobj.MV.Min = -10;
 nlobj.MV.Max = 10;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.MaxIter = 12;
+nlobj.Optimization.SolverOptions.MaxIter = 30;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
 
 X = [0; 0; 0; 0];
 validateFcns(nlobj, X, 0, [])
 
-[~, nloptions] = nlmpcmove(nlobj, [0 0 0 0], 0, [0 -1],[]);
+[~, nloptions] = nlmpcmove(nlobj, [0 0 0 0], 0, [0 1],[]);
 u_prev = 0;
 %% memo
 
 %Diskretizace
-x1p = 10;
-x2p = 20;
-x3p = 25;
-x4p = 12;
+x1p = 6;
+x2p = 12;
+x3p = 18;
+x4p = 15;
 yref1p = 2;
 
 x1 = linspace(-1, 1, x1p);
@@ -59,8 +59,10 @@ x3 = linspace(0, 2*pi, x3p);
 x4 = linspace(-pi,pi, x4p);
 yref1 = [-1, 1];
 
-memoGrid_ = ndgrid(x1,x2,x3,x4,yref1);
-pointCount = numel(memoGrid_);
+dim5Grid = ndgrid(x1,x2,x3,x4,yref1);
+pointCount = numel(dim5Grid);
+pointArray = [];
+moveArray = [];
 
 counter = 0;
 elapsedTime_ = [];
@@ -75,10 +77,17 @@ for i = 1:length(x1)
                     counter = counter + 1;
                     
                     x = [x1(i) x2(j) x3(k) x4(l)]; % state space point
-                    yref = memoGrid_(1,1,1,1,m); % reference point
+                    yref = yref1(m); % reference point
+                    
+                    %transformation from 5D to 2D
+                    %each row consists of 5 columns, where each column
+                    %represents a separate dimension and each row a point
+                    pointArray = [pointArray; x yref]; 
                     
                     [u, nloptions, ~] = nlmpcmove(nlobj,x,u_prev,[0 yref],[],nloptions);
-                    memoGrid_(i,j,k,l,m) = u;
+                    %move array stores calculated action variable at the
+                    %respective point in pointArray
+                    moveArray = [moveArray; u];
                     u_prev = u;
 
                     
@@ -101,6 +110,8 @@ for i = 1:length(x1)
     end
 end
 
-sol.Grid = memoGrid_;
+sol.Grid = dim5Grid;
+sol.pointArray = pointArray;
+sol.moveArary = moveArray;
 
-save('memoGrids/memoGrid1.mat', 'sol');
+save('memoGrids/memoGrid3.mat', 'sol');

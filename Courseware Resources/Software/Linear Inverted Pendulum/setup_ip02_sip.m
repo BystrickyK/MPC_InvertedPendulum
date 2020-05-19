@@ -16,10 +16,10 @@ clear all;
 % ############### USER-DEFINED IP02 with SIP CONFIGURATION ###############
 
 % if IP02: Type of Cart Load: set to 'NO_LOAD', 'WEIGHT'
- IP02_LOAD_TYPE = 'NO_LOAD';
+%  IP02_LOAD_TYPE = 'NO_LOAD';
 % IP02_LOAD_TYPE = 'WEIGHT';
 % Type of single pendulum: set to 'LONG_24IN', 'MEDIUM_12IN'
- PEND_TYPE = 'LONG_24IN'; 
+%  PEND_TYPE = 'LONG_24IN'; 
 % PEND_TYPE = 'MEDIUM_12IN'; 
 % Turn on or off the safety watchdog on the cart position: set it to 1 , or 0 
 X_LIM_ENABLE = 1;       % safety watchdog turned ON
@@ -28,12 +28,12 @@ X_LIM_ENABLE = 1;       % safety watchdog turned ON
 X_MAX = 0.3;            % cart displacement maximum safety position (m)
 X_MIN = - X_MAX;        % cart displacement minimum safety position (m)
 % Turn on or off the safety watchdog on the pendulum angle: set it to 1 , or 0 
-ALPHA_LIM_ENABLE = 1;       % safety watchdog turned ON
+% ALPHA_LIM_ENABLE = 1;       % safety watchdog turned ON
 %ALPHA_LIM_ENABLE = 0;      % safety watchdog turned OFF
 % Safety Limits on the pendulum angle (deg)
-global ALPHA_MAX ALPHA_MIN
-ALPHA_MAX = 20;            % pendulum angle maximum safety position (deg)
-ALPHA_MIN = - ALPHA_MAX;   % pendulum angle minimum safety position (deg)
+% global ALPHA_MAX ALPHA_MIN
+% ALPHA_MAX = 20;            % pendulum angle maximum safety position (deg)
+% ALPHA_MIN = - ALPHA_MAX;   % pendulum angle minimum safety position (deg)
 % Amplifier Gain: set VoltPAQ amplifier gain to 1
 K_AMP = 1;
 % Amplifier Type: set to 'VoltPAQ' or 'Q3'

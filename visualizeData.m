@@ -5,7 +5,7 @@ addpath('gif')
 addpath('results')
 
 
-data = load('ResultsMPC15.mat');
+data = load('ResultsNLMPC.mat');
 data = data.sol;
 
 samples = length(data.X);
