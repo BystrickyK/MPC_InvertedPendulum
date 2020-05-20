@@ -1,7 +1,5 @@
-
 % Cart Position Pinion number of teeth
 N_pp = 56;
-
 % Rack Pitch (m/teeth)
 Pr = 1e-2 / 6.01; % = 0.0017
 
