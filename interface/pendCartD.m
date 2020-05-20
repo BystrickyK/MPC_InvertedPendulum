@@ -1,9 +1,9 @@
-function x = pendCartD(x,u)
+function X = pendCartD(X,u)
     M = 2;
     delta = 0.01/M;
-    xk = x;
+    xk = X;
     for ct=1:M
         xk = xk + delta*pendCartC(xk,u);
     end
-    x=xk;
+    X=xk;
 end

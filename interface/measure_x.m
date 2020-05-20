@@ -1,2 +1,2 @@
-function y = measure_x(u)
-y = u;
+function y = measure_x(x)
+y = x(1);
