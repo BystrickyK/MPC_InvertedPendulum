@@ -16,8 +16,8 @@ nu = 1;
 nlobj = nlmpc(nx, ny, nu);
 
 
-nlobj.PredictionHorizon = 15;
-nlobj.ControlHorizon = 12;
+nlobj.PredictionHorizon = 10;
+nlobj.ControlHorizon = 10;
 dt = 0.1;
 nlobj.Ts = dt;
 
@@ -26,15 +26,15 @@ nlobj.Jacobian.StateFcn = 'AB';
 nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 % nlobj.Model.OutputFcn = @(X, u) [X(1); sawtooth(X(3), 0.5)];
-triangleWaveFourier3 = @(x) 8/pi^2 * (sin(x) - 1/9*sin(3*x) + 1/25*sin(5*x));
-nlobj.Model.OutputFcn = @(X, u) [X(1); triangleWaveFourier3(X(3)-pi/2)];
+triangleWaveFncApprox = 
+nlobj.Model.OutputFcn = @(X, u) [X(1); -cos(X(3))];
 
-nlobj.Weights.OutputVariables = [8 4];
-nlobj.Weights.ManipulatedVariablesRate = 0.05;
-
+nlobj.Weights.OutputVariables = [2 2];
+nlobj.Weights.ManipulatedVariablesRate = 0.1;
+% 
 %  nlobj.OV(1).Min = -0.33;
 %  nlobj.OV(1).Max = 0.33;
-%  
+ 
 nlobj.MV.Min = -5;
 nlobj.MV.Max = 5;
  
@@ -56,7 +56,7 @@ EKF.ProcessNoise = diag([1 5 1 5]);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X0 = [0 0 0 0]'; %xc dxc alpha dalpha
+X0 = [0.01 0 0 0]'; %xc dxc alpha dalpha
 EKF.State = X;
 u = 0;
 %nastaveni solveru
@@ -164,7 +164,7 @@ for k = 1:simulationTime/dt*10
     U(k+1) = u;
     D(:,k+1) = d;
     %% Mereni a predikce EKF
-    Y(:,k+1) = C * xs(end,:)' + [randn(1)*0.002 randn(1)*0.002]';  
+    Y(:,k+1) = C * xs(end,:)';  
     predict(EKF, u);
 
     waitbar(k*dt/simulationTime/10,hbar);

@@ -29,7 +29,7 @@ end
 
 
 kRefreshPlot = 50; %vykresluje se pouze po kazdych 'kRefreshPlot" samplech
-kRefreshAnim = 8; % ~ ^
+kRefreshAnim = 10; % ~ ^
 
 for k = 2:1:samples-1
     %% Vizualizace
