@@ -13,7 +13,9 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
     
     %% State variables
     figure(1);
-    subplot(221);
+    ylabels = ["$\bf{x_c\;[m]}$", "$\bf{\dot{x_c}\;[m \cdot s^-1]}$", "$\bf{\alpha\;[rad]}$", "$\bf{\dot{\alpha}\;[rad \cdot s^-1]}$"];
+    
+    subplot(321);
     hold on
     grid on
     plot(time, X(1, k-Ka:k), "LineWidth", 2, 'Color', 'b', 'Marker', '.');
@@ -24,9 +26,12 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
         plot(time, Xest(1, k-Ka:k), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r', 'Marker', '.');
     end
     xlim(xlims);
+    ylabel(ylabels(1),'Interpreter','latex');
+    xlabel("$t\;[s]$",'Interpreter','latex');
     
+
     for i = 2:4
-        subplot(2,2,i);
+        subplot(3,2,i);
         hold on;
         grid on;
         plot(time, X(i, k-Ka:k), "LineWidth", 2, 'Color', 'b', 'Marker', '.');
@@ -35,21 +40,31 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
                 'LineStyle', ':', 'Color', 'r', 'Marker', '.');
         end
         xlim(xlims);
+        ylabel(ylabels(i),'Interpreter','latex');
+            xlabel("$t\;[s]$",'Interpreter','latex');
     end
     
+    subplot(3,1,3);
+    hold on
+    grid on
+    stairs(time, U(k-Ka:k),...
+    'LineWidth', 1.5, 'Color', 'r');
+    xlim(xlims);
+            ylabel("$u\;[V]$",'Interpreter','latex');
+            xlabel("$t\;[s]$",'Interpreter','latex');
     %% Plotting distrbances, inputs and measurements
+% 
+% data = [D; U; Y];
+% figure(3)
+%     for i = 1:5
+%         subplot(5,1,i);
+%         hold on 
+%         grid on
+%         stairs(time, data(i, k-Ka:k),...
+%             'LineWidth', 1, 'Color', 'r', 'Marker', 'x');
+%         xlim(xlims);
 
-data = [D; U; Y];
-figure(3)
-    for i = 1:5
-        subplot(5,1,i);
-        hold on 
-        grid on
-        stairs(time, data(i, k-Ka:k),...
-            'LineWidth', 1, 'Color', 'r', 'Marker', 'x');
-        xlim(xlims);
-
-    end
+%     end
     
 drawnow
 

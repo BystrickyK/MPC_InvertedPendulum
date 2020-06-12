@@ -14,7 +14,7 @@ function [] = animRefresh(X, Xest, r, u, d)
         grid on
 
         axis equal
-        xlim([-1.2, 1.2]);
+        xlim([-1.4, 1.4]);
         ylim([-0.6, 0.6]);
         
         quiver( xc, 0,...
