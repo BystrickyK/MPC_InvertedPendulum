@@ -13,7 +13,7 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
     
     %% State variables
     figure(1);
-    ylabels = ["$\bf{x_c\;[m]}$", "$\bf{\dot{x_c}\;[m \cdot s^-1]}$", "$\bf{\alpha\;[rad]}$", "$\bf{\dot{\alpha}\;[rad \cdot s^-1]}$"];
+%     ylabels = ["$\bf{x_c\;[m]}$", "$\bf{\dot{x_c}\;[m \cdot s^-1]}$", "$\bf{\alpha\;[rad]}$", "$\bf{\dot{\alpha}\;[rad \cdot s^-1]}$"];
     
     subplot(321);
     hold on
@@ -26,8 +26,8 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
         plot(time, Xest(1, k-Ka:k), "LineWidth", 2, 'LineStyle', ':', 'Color', 'r', 'Marker', '.');
     end
     xlim(xlims);
-    ylabel(ylabels(1),'Interpreter','latex');
-    xlabel("$t\;[s]$",'Interpreter','latex');
+%     ylabel(ylabels(1),'Interpreter','latex');
+%     xlabel("$t\;[s]$",'Interpreter','latex');
     
 
     for i = 2:4
@@ -40,8 +40,8 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
                 'LineStyle', ':', 'Color', 'r', 'Marker', '.');
         end
         xlim(xlims);
-        ylabel(ylabels(i),'Interpreter','latex');
-            xlabel("$t\;[s]$",'Interpreter','latex');
+%         ylabel(ylabels(i),'Interpreter','latex');
+%             xlabel("$t\;[s]$",'Interpreter','latex');
     end
     
     subplot(3,1,3);
@@ -50,8 +50,8 @@ function [] = plotRefresh(Ts, X, Xest, R, U, D, Y, k, Ka)
     stairs(time, U(k-Ka:k),...
     'LineWidth', 1.5, 'Color', 'r');
     xlim(xlims);
-            ylabel("$u\;[V]$",'Interpreter','latex');
-            xlabel("$t\;[s]$",'Interpreter','latex');
+%             ylabel("$u\;[V]$",'Interpreter','latex');
+%             xlabel("$t\;[s]$",'Interpreter','latex');
     %% Plotting distrbances, inputs and measurements
 % 
 % data = [D; U; Y];

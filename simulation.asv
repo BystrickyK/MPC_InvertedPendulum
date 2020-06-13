@@ -3,7 +3,10 @@ clc
 clear all 
 close all
 
-addpa
-
+addpath('measurementData');
+data = load('msrData.mat');
 %%
-
+data = data.Data
+%%
+T = data.Time
+D

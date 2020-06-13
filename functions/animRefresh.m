@@ -1,5 +1,7 @@
 function [] = animRefresh(X, Xest, r, u, d)
     
+    
+
     figure(2);
     xc = X(1);
     alpha = X(3);

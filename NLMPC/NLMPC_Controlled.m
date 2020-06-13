@@ -146,7 +146,7 @@ for k = 1:simulationTime/dt*10
 %               grid on
 % 
 %               %Vypocetni cas
-%               disp("Computing time: " + computingTimes(end))
+%               diskp("Computing time: " + computingTimes(end))
 %               disp(k + "/" + simulationTime/dt*10);
     end
     
