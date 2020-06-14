@@ -6,21 +6,26 @@ close all
 addpath('measurementData');
 addpath('functions');
 data = load('msrDataSwingup1.mat');
+data = load('msrData1noU.mat');
 p = getParameters();
 %%
 data = data.Data
 Ts = data.Time;
-X = data.Data(:,[1 3 2 4])';
-X(3,:) = X(3,:)+pi;
+% X = data.Data(:,[1 3 2 4])';
+X = data.Data(:,:)';
+% X(3,:) = X(3,:)+pi;
+X(3,:) = unwrap(X(3,:))
 X2 = zeros(size(X));
 T2 = zeros(size(Ts));
 U = data.Data(:,5);
 samples = length(Ts)
 
 %% uprava parametru
-p.J_p = p.J_p*0.8
-p.l_P = p.l_p*0.9
-p.M_p = p.M_p*0.9
+p.J_p = p.J_p
+p.l_P = p.l_p
+p.M_p = 0.127
+p.l_p = p.l_p
+p.M_c = 0.68;
 %%
 
 dt = 0.002;
@@ -35,6 +40,7 @@ for k = 1:samples
     
     waitbar(k/samples,hbar);
 end
+
 close(hbar);
 for i=1:10
     sound(30);
@@ -56,13 +62,28 @@ plot(Ts,X(i,:),'b');
 hAx(i+4) = subplot(2,4,i+4);
 plot(T2,X2(i,1:end-1),'r');
 end
+% 
+% 
+%  filename = strcat('comparison',".gif");
+%     fig = figure('visible','off'); % getframe function for gif creation
+% %    runs 4x slower if figure is invisible
+%     animRefresh(X(:,1), X2(:,1), 0, U(1), 0);
+%     frame = getframe(gcf);
+%     im = frame2im(frame);
+%     [imind,cm] = rgb2ind(im,256);
+%     imwrite(imind,cm,filename,'gif', 'Loopcount',inf); 
 
 figure;
-for k = 3000:1:samples-1
+for k = 2:1:samples
 if(mod(k,kRefreshAnim)==0)
     animRefresh(X(:,k), X2(:,k), 0, U(k), 0); 
     titleString = strcat("Time: ", string(Ts(k)), " s");
     title(titleString)
     xlim(hAx,[k*dt-10 k*dt]);
+%     
+%         frame = getframe(gcf);
+%         im = frame2im(frame);
+%         [imind,cm] = rgb2ind(im,256);
+%         imwrite(imind,cm,filename,'gif','WriteMode','append','DelayTime',0);
 end   
 end
