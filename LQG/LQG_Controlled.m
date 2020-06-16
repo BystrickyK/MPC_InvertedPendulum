@@ -6,6 +6,7 @@ close all
 tmp = cd('..\');
 parentDir = cd('.\LQG');
 addpath(strcat(parentDir,'\functions')); %enables access to scripts in the folder
+resultsDir = strcat(parentDir,'\results');
 
 %%  Model
     X_operating = [0 0 pi 0]';

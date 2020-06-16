@@ -1,3 +1,21 @@
+%% Init
+clc
+clear all 
+close all
+
+cd('..\');
+parentDir = cd('.\NLMPC');
+addpath(strcat(parentDir,'\functions')); %enables access to scripts in the folder
+resultsDir = strcat(parentDir,'\results');
+savefileDir = strcat(resultsDir, '\NLMPC');
+if ~exist(savefileDir,'dir')
+    mkdir(savefileDir);
+end
+timeLabel = datetime;
+timeLabel.Format = 'dd-MM-uu_HH-mm_ss';
+timeLabel = string(timeLabel);
+saveFilePath = strcat(savefileDir,'\data_',timeLabel);
+
 %%  Initialize interface
 % Cart Position Pinion number of teeth
 N_pp = 56;
