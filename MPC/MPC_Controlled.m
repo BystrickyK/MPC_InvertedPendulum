@@ -18,7 +18,7 @@ nlmpcobj = nlmpc(nx, ny, nu);
 
 nlmpcobj.PredictionHorizon = 20;
 nlmpcobj.ControlHorizon = 10;
-MPC_Ts = 0.05;
+MPC_Ts = 0.1;
 nlmpcobj.Ts = MPC_Ts;
 
 nlmpcobj.Model.StateFcn = 'pendCartC';
@@ -26,11 +26,11 @@ nlmpcobj.Jacobian.StateFcn = 'AB';
 nlmpcobj.Model.IsContinuousTime = true;
 nlmpcobj.Model.OutputFcn = @(X, u) [X(1); X(3)];
 
-nlmpcobj.Weights.OutputVariables = [1 2];
+nlmpcobj.Weights.OutputVariables = [1 4];
 nlmpcobj.Weights.ManipulatedVariablesRate = 0.0001;
 
-nlmpcobj.OutputVariables(1).Min = -0.35;
-nlmpcobj.OutputVariables(1).Max = 0.35;
+% nlmpcobj.OutputVariables(1).Min = -0.35;
+% nlmpcobj.OutputVariables(1).Max = 0.35;
 
 
 
@@ -43,12 +43,48 @@ nlmpcobj.MV.Max = 8;
 nlmpcobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlmpcobj.Optimization.SolverOptions.Display = 'none';
 
-X = [0; 0; 0; 0];
+X = [0; 0; pi; 0];
 validateFcns(nlmpcobj, X, 0, [])
+%% Linearni model
 
+    X_operating = [0 0 pi 0]';
+    [A, B] = AB(X_operating, 0);
+    Co = [1 0 0 0; 0 0 1 0]; % observed outputs | measuring xc and alpha
+    Cr = [1 0 0 0]; % reference outputs
+    D = [0; 0];
+    
+    % Adding an error integrator into the state space description
+    % The controller's objective is to follow the reference r
+    % with the variable x_c, where x_c is the position of the cart
+    % The controlled plant already has an integrator, the controller's
+    % integrator purpose is to reject constant disturbances, not to
+    % remove steady-state error. 
+    Ah = [A, zeros(length(A),1);
+         -Cr, 0];
+    Bh = [B; 0];
+    Cho = [1 0 0 0 0; 0 0 1 0 0];
+    Dh = [0;0];
+    
+    Gi = ss(Ah,Bh,Cho,Dh,...
+        'StateName', {'x1','x2','x3','x4','Ksi'},...
+        'OutputName', {'x_c','alpha'}); %added integrator
+    G = ss(A,B,Co,D,...
+        'StateName', {'x1','x2','x3','x4'},...
+        'OutputName', {'x_c','alpha'}); %original system
+    Go = ss(A,B,eye(4),zeros(4,1),...
+        'StateName', {'x1','x2','x3','x4'},...
+        'OutputName', {'x_c','dx_c','alpha','dalpha'}); %fully observed system
 %% Prevod na linearni MPC v pracovnim bode X_operating
 X_operating = [0, 0, pi, 0];
-mpcobj = convertToMPC(nlmpcobj, X_operating, 0);
+% mpcobj = convertToMPC(nlmpcobj, X_operating, 0);
+%% Tvorba MPC
+mpcobj = mpc(G, MPC_Ts);
+mpcobj.Weights.OutputVariables = [4 4];
+mpcobj.Weights.ManipulatedVariablesRate = 0.01;
+
+mpcobj.MV.Min = -8;
+mpcobj.MV.Max = 8;
+
 %% Navrh EKF
 
 EKF = extendedKalmanFilter(@(X,u) pendCartD(X,u), ...
@@ -58,7 +94,7 @@ EKF.ProcessNoise = diag([1 5 1 5]);
 
 %% Nastaveni pocatecnich hodnot
 %pocatecni stav
-X0 = [0 0 pi*31/32 0]'; %xc dxc alpha dalpha
+X0 = [0.2 0 pi*31/32 0]'; %xc dxc alpha dalpha
 EKF.State = X0;
 u = 0;
 %nastaveni solveru
@@ -91,8 +127,8 @@ d2T = 0;
 d2t = 0;
 d2a = 0;
 
-yref1 = [0 pi];
-yref2 = [0 pi];
+yref1 = [0 0];
+yref2 = [0 0];
 
 mpc_state = mpcstate;
 mpc_state.Plant = X_operating;
@@ -146,6 +182,7 @@ for k = 1:simulationTime/MPC_Ts
     %% Regulace
         tic
         mpc_state.Plant = X(:,k);
+        mpc_state.Disturbance
 %         mpc_state.LastMove = U(:,k);
         [u, info] = mpcmove(mpcobj,mpc_state,[],yref,[]);
         computingTime = toc;
@@ -181,7 +218,7 @@ for k = 1:simulationTime/MPC_Ts
     D(:,k+1) = d;
     Rf(:,k+1) = yref;
     %% Mereni a predikce EKF
-    Y(:,k+1) = C * xs(end,:)' + [randn(1)*0.002 randn(1)*0.002]';  
+    Y(:,k+1) = C * xs(end,:)' + [randn(1)*0.0002 randn(1)*0.0002]';  
     predict(EKF, u);
 
     waitbar(k*MPC_Ts/simulationTime,hbar);

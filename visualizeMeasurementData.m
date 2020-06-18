@@ -68,7 +68,7 @@ plot(T,Rf(:,1),'g-.', 'Parent', hAx(1));
 %% Animace
 
 kRefreshPlot = inf; 
-kRefreshAnim = 30;
+kRefreshAnim = 15;
 for k = 2:1:length(T)
     if(mod(k,kRefreshPlot)==0) xlim(hAx,[k*dt-15 k*dt]); end
     

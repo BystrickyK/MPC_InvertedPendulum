@@ -7,29 +7,19 @@ data = load([filepath '\' file])
 data = data.data;
 %%
 Xmsr = data.Xmsr;
-    T = Xmsr.alpha.Time;
 Xest = data.Xest;
 U = data.U.u;
 Rf = data.Rf.ref;
-%% Resampling
-names = string(fieldnames(Xmsr));
-for i = 1:4
-    Xest.(names(i)) = resample(Xest.(names(i)),T);
-end
-U = resample(U,T);
-if length(Rf.Data)==1
-    Rf = timeseries(R
-end
-Rf = resample(Rf,T);
-
 %%
+T = U.Time;
 U = U.Data;
 Rf = Rf.Data;
 X1 = zeros(4, length(T));
 X2 = zeros(4, length(T));
+names = fieldnames(Xmsr);
 for i = 1:4
-    X1(i,:) = Xmsr.(names(i)).Data;
-    X2(i,:) = Xmsr.(names(i)).Data;
+    X1(i,:) = Xmsr.(string(names(i))).Data;
+    X2(i,:) = Xmsr.(string(names(i))).Data;
 end
 dt = T(2)-T(1);
 %% Plot figure
@@ -67,10 +57,10 @@ plot(T,Rf(:,1),'g-.', 'Parent', hAx(1));
 
 %% Animace
 
-kRefreshPlot = 300; 
-kRefreshAnim = 30;
+kRefreshPlot = 20; 
+kRefreshAnim = 5;
 for k = 2:1:length(T)
-    if(mod(k,kRefreshPlot)==0) xlim(hAx,[k*dt-15 k*dt]); end
+    if(mod(k,kRefreshPlot)==0) xlim(hAx,[k*dt-10 k*dt]); end
     
     if(mod(k,kRefreshAnim)==0)
         animRefresh(X1(:,k), X2(:,k), Rf(k,1), U(k), 0);
