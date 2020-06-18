@@ -19,7 +19,8 @@ saveFilePath = strcat(savefileDir,'\data_',timeLabel);
 %%  Initialize interface
 % Cart Position Pinion number of teeth
 N_pp = 56;
-
+    wcf = 2 * pi * 10.0;  % filter cutting frequency
+    zetaf = 0.9;  
 % Rack Pitch (m/teeth)
 Pr = 1e-2 / 6.01; % = 0.0017
 
@@ -33,12 +34,12 @@ global K_EC K_EP
 K_AMP = 1;
 
 X_LIM_ENABLE = 1;
-XMAX = 0.35;
+XMAX = 0.33;
 
 ALPHA_LIM_ENABLE = 0;
 ALPHAMAX = pi/4;
 
-KF_Ts = 0.01;
+KF_Ts = 0.010;
 MPC_Ts = 0.1;
 
 VMAX_AMP = 6;
@@ -69,16 +70,16 @@ triangleWaveFourier3 = @(x) 8/pi^2 * (sin(x) - 1/9*sin(3*x) + 1/25*sin(5*x));
 nlobj.Model.OutputFcn = @(X, u) [X(1); triangleWaveFourier3(X(3)-pi/2)];
 
 nlobj.Weights.OutputVariables = [8 4];
-nlobj.Weights.ManipulatedVariablesRate = 0.01;
+nlobj.Weights.ManipulatedVariablesRate = 0.001;
 
-%  nlobj.OV(1).Min = -0.33;
-%  nlobj.OV(1).Max = 0.33;
+%  nlobj.OV(1).Min = -0.3;
+%  nlobj.OV(1).Max = 0.3;
 %  
-nlobj.MV.Min = -5;
-nlobj.MV.Max = 5;
+nlobj.MV.Min = -5.5;
+nlobj.MV.Max = 5.5;
  
 nlobj.Optimization.UseSuboptimalSolution = true;
-nlobj.Optimization.SolverOptions.MaxIter = 3;
+nlobj.Optimization.SolverOptions.MaxIter = 4;
 % nlobj.Optimization.SolverOptions.UseParallel = true;
 nlobj.Optimization.SolverOptions.Algorithm = 'sqp';
 nlobj.Optimization.SolverOptions.Display = 'none';
@@ -114,8 +115,8 @@ validateFcns(nlobj, X0, 0, [])
         'OutputName', {'x_c','dx_c','alpha','dalpha'}); %fully observed system
     
  %% Regulator
- Q = diag([5 0.1 1 0.1]); %P
+ Q = diag([60 0.0001 300 0.0001]); %P
 %  Q = diag([1 0.1 1 0.1 5]); %I  / PI
-    R = 0.1;
+    R = 0.001;
     [K,S,e] = lqr(G.A,G.B,Q,R);
     K = lqr(G,Q,R);

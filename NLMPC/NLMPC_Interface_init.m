@@ -20,6 +20,9 @@ saveFilePath = strcat(savefileDir,'\data_',timeLabel);
 % Cart Position Pinion number of teeth
 N_pp = 56;
 
+    wcf = 2 * pi * 10.0;  % filter cutting frequency
+    zetaf = 0.9;  
+
 % Rack Pitch (m/teeth)
 Pr = 1e-2 / 6.01; % = 0.0017
 
@@ -33,7 +36,7 @@ global K_EC K_EP
 K_AMP = 1;
 
 X_LIM_ENABLE = 1;
-XMAX = 0.35;
+XMAX = 0.30;
 
 ALPHA_LIM_ENABLE = 0;
 ALPHAMAX = pi/4;
@@ -48,7 +51,7 @@ X0 = [0; 0; 0; 0];
 %%  Synthesize NLMPC controller and set reference
 
 % Reference
-yref = [0 1]; % x alpha (1 is up | -1 is down)
+yref = [0 0]; % x alpha (1 is up | -1 is down)
 
 nx = 4;
 ny = 2;
@@ -66,9 +69,10 @@ nlobj.Model.IsContinuousTime = true;
 nlobj.Model.NumberOfParameters = 0;
 
 triangleWaveFourier3 = @(x) 8/pi^2 * (sin(x) - 1/9*sin(3*x) + 1/25*sin(5*x));
-nlobj.Model.OutputFcn = @(X, u) [X(1); triangleWaveFourier3(X(3)-pi/2)];
+% nlobj.Model.OutputFcn = @(X, u) [X(1); triangleWaveFourier3(X(3)-pi/2)];
+nlobj.Model.OutputFcn = @(X, u) [X(1); X(3)];
 
-nlobj.Weights.OutputVariables = [8 4];
+nlobj.Weights.OutputVariables = [10 4];
 nlobj.Weights.ManipulatedVariablesRate = 0.01;
 
 %  nlobj.OV(1).Min = -0.33;

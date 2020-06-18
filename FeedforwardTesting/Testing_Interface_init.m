@@ -19,6 +19,8 @@ saveFilePath = strcat(savefileDir,'\data_',timeLabel);
 % Cart Position Pinion number of teeth
 N_pp = 56;
 
+    wcf = 2 * pi * 10.0;  % filter cutting frequency
+    zetaf = 0.9;  
 % Rack Pitch (m/teeth)
 Pr = 1e-2 / 6.01; % = 0.0017
 
@@ -32,14 +34,14 @@ global K_EC K_EP
 K_AMP = 1;
 
 X_LIM_ENABLE = 1;
-XMAX = 0.35;
+XMAX = 0.30;
 
-ALPHA_LIM_ENABLE = 1;
+ALPHA_LIM_ENABLE = 0;
 ALPHAMAX = pi/4;
 
-KF_Ts = 0.01;
+KF_Ts = 0.02;
 
 VMAX_AMP = 6;
 
 % Initial state
-X0 = [0; 0; pi; 0];
+X0 = [0; 0; 0; 0];

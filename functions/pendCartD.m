@@ -1,5 +1,5 @@
 function X = pendCartD(X,u)
-    M = 2;
+    M = 10;
     delta = 0.01/M;
     xk = X;
     for ct=1:M

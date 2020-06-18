@@ -22,6 +22,9 @@ N_pp = 56;
 % Rack Pitch (m/teeth)
 Pr = 1e-2 / 6.01; % = 0.0017
 
+
+    wcf = 2 * pi * 10.0;  % filter cutting frequency
+    zetaf = 0.9;  
 global K_EC K_EP
     % Cart Encoder Resolution (m/count)
     K_EC = Pr * N_pp / ( 4 * 1024 ); % = 22.7485 um/count
@@ -32,12 +35,12 @@ global K_EC K_EP
 K_AMP = 1;
 
 X_LIM_ENABLE = 1;
-XMAX = 0.35;
+XMAX = 0.20;
 
 ALPHA_LIM_ENABLE = 1;
-ALPHAMAX = pi/4;
+ALPHAMAX = pi/8;
 
-KF_Ts = 0.01;
+KF_Ts = 0.002;
 
 VMAX_AMP = 6;
 
@@ -75,6 +78,6 @@ X0 = [0; 0; pi; 0];
  %% Regulator
 %  Q = diag([5 0.1 1 0.1]); %P
     Q = diag([1 0.1 1 0.1 1]); %I  / PI
-    R = 0.1;
+    R = 0.001;
     [K,S,e] = lqr(Gi.A,Gi.B,Q,R);
     K = lqr(Gi,Q,R);
